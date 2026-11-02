@@ -41,6 +41,8 @@ export function initIntegrations() {
     CREATE TABLE IF NOT EXISTS partnerKeys (id TEXT PRIMARY KEY, partner TEXT NOT NULL, name TEXT NOT NULL, hash TEXT NOT NULL UNIQUE, scopes TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL, lastUsedAt TEXT);
     CREATE TABLE IF NOT EXISTS partnerBookings (id TEXT PRIMARY KEY, reservationId TEXT NOT NULL REFERENCES reservations(id), itemId TEXT NOT NULL, partner TEXT NOT NULL, guestIndex INTEGER NOT NULL, offerId TEXT NOT NULL, startsAt TEXT NOT NULL, endsAt TEXT NOT NULL, status TEXT NOT NULL, operationId TEXT NOT NULL UNIQUE, cancelOperationId TEXT, externalId TEXT, error TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS partnerBookings_reservation ON partnerBookings(reservationId);
+    CREATE TABLE IF NOT EXISTS integrationOperationTargets (operationId TEXT PRIMARY KEY, partner TEXT NOT NULL, mode TEXT NOT NULL, baseUrl TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS partnerOperationRequests (operationId TEXT PRIMARY KEY REFERENCES partnerBookings(operationId), payload TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS voucherOperations (reservationId TEXT PRIMARY KEY REFERENCES reservations(id), operationId TEXT NOT NULL UNIQUE, status TEXT NOT NULL, error TEXT, updatedAt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS partnerDemoState (partner TEXT NOT NULL, operationId TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(partner, operationId));
     CREATE TABLE IF NOT EXISTS demoVouchers (reference TEXT PRIMARY KEY, componentId TEXT NOT NULL, provider TEXT NOT NULL DEFAULT 'C', kind TEXT NOT NULL DEFAULT 'hotel', validFrom TEXT NOT NULL, validUntil TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, reservationId TEXT);
