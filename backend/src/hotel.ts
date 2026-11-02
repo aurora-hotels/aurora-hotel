@@ -5,7 +5,16 @@ import { all, get, run, transaction } from './db.js';
 import { config } from './config.js';
 import { AppError, assert } from './errors.js';
 import { emailSchema, nameSchema, phoneSchema } from './auth.js';
-import { audit, encrypt, isStaff, now, requireRole, requireScope, type Actor } from './security.js';
+import {
+  audit,
+  encrypt,
+  decrypt,
+  isStaff,
+  now,
+  requireRole,
+  requireScope,
+  type Actor,
+} from './security.js';
 import {
   verifyVoucherBeforeCreate,
   beforeCheckIn,
@@ -300,12 +309,10 @@ hotelRouter.get('/availability', (req, res) => {
     query.checkIn,
   );
   res.json({
-    items: rooms
-      .slice(page.offset, page.offset + page.pageSize)
-      .map((room) => ({
-        ...roomView(room),
-        pricing: pricing(room, packageItem, query.checkIn, query.checkOut),
-      })),
+    items: rooms.slice(page.offset, page.offset + page.pageSize).map((room) => ({
+      ...roomView(room),
+      pricing: pricing(room, packageItem, query.checkIn, query.checkOut),
+    })),
     total: rooms.length,
     page: page.page,
     pageSize: page.pageSize,
@@ -315,7 +322,7 @@ const createSchema = staySchema
   .extend({
     roomId: z.string().min(1).max(100),
     packageId: z.string().min(1).max(100).nullable().optional(),
-    expectedTotalMinor: z.number().int().nonnegative().max(1000000000),
+    expectedTotalMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     guest: z
       .object({ name: nameSchema, email: emailSchema, phone: phoneSchema.default('') })
       .strict(),
@@ -506,7 +513,7 @@ hotelRouter.get('/reservations/:id', requireScope('reservations:read'), (req, re
 hotelRouter.patch(
   '/reservations/:id',
   requireScope('reservations:update'),
-  lockReservation((req, res) => {
+  lockReservation(async (req, res) => {
     const body = staySchema
       .extend({
         expectedVersion: z.number().int().positive(),
@@ -515,6 +522,27 @@ hotelRouter.patch(
       })
       .strict()
       .parse(req.body);
+    const initial = getReservationForActor(String(req.params.id), req.actor!);
+    editable(initial, req.actor!);
+    assert(
+      initial.version === body.expectedVersion,
+      409,
+      'VERSION_CONFLICT',
+      'Pobyt został zmieniony. Odśwież dane.',
+    );
+    validateStay(body.checkIn, body.checkOut);
+    assertCanChangeDates(initial.id);
+    // D sprawdza nowe daty przed zapisem. Awaria lub brak zgodności nie zmienia pobytu.
+    // Blokada rezerwacji obejmuje całe oczekiwanie HTTP; SQLite nie trzyma wtedy transakcji.
+    const voucherInput = initial.voucherReference
+      ? {
+          checkIn: body.checkIn,
+          checkOut: body.checkOut,
+          voucherReference: decrypt(initial.voucherReference),
+          hotelComponentId: initial.hotelComponentId,
+        }
+      : undefined;
+    if (voucherInput) await verifyVoucherBeforeCreate(voucherInput, initial.id);
     const output = transaction(() => {
       const row = getReservationForActor(String(req.params.id), req.actor!);
       editable(row, req.actor!);
@@ -525,11 +553,13 @@ hotelRouter.patch(
         'Pobyt został zmieniony. Odśwież dane.',
       );
       assert(
-        !row.voucherReference,
+        row.voucherReference === initial.voucherReference &&
+          row.hotelComponentId === initial.hotelComponentId,
         409,
-        'VOUCHER_CHANGE_REQUIRES_COORDINATION',
-        'Zmianę pobytu z voucherem trzeba najpierw uzgodnić z partnerem D.',
+        'VERSION_CONFLICT',
+        'Powiązanie vouchera zostało zmienione. Odśwież dane.',
       );
+      if (voucherInput) assertVoucherAvailable(voucherInput, row.id);
       assertCanChangeDates(row.id);
       const { room, packageItem } = loadOffer(row.roomId, row.packageId);
       assert(

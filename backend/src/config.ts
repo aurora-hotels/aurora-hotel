@@ -8,6 +8,13 @@ const number = (name: string, fallback: number, min: number, max: number) => {
   return value;
 };
 const production = process.env.NODE_ENV === 'production';
+const boolean = (name: string, fallback: boolean) => {
+  const value = process.env[name];
+  if (value === undefined) return fallback;
+  if (value !== 'true' && value !== 'false')
+    throw new Error(`${name} musi mieć wartość true albo false.`);
+  return value === 'true';
+};
 const secret = (name: string, fallback: string) => {
   const value = process.env[name] || fallback;
   if (production && (!process.env[name] || value.length < 32))
@@ -16,8 +23,7 @@ const secret = (name: string, fallback: string) => {
 };
 export const config = {
   production,
-  cookieSecure:
-    process.env.COOKIE_SECURE === undefined ? production : process.env.COOKIE_SECURE === 'true',
+  cookieSecure: boolean('COOKIE_SECURE', production),
   databasePath: process.env.DATABASE_PATH || path.resolve('data/aurora.sqlite'),
   port: number('PORT', 3001, 1, 65535),
   host: process.env.HOST || '127.0.0.1',

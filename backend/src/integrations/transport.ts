@@ -55,12 +55,44 @@ function isPrivate(address: string): boolean {
     (a === 198 && (b === 18 || b === 19))
   );
 }
+// DNS też podlega limitowi czasu; samo wyszukanie hosta nie wysyła żądania.
+async function resolveHost(host: string, timeoutMs: number) {
+  if (isIP(host)) return [{ address: host, family: isIP(host) }];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      lookup(host, { all: true }).catch(() => {
+        throw new IntegrationError(
+          503,
+          'PARTNER_UNAVAILABLE',
+          'Nie udało się odnaleźć serwera partnera.',
+        );
+      }),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new IntegrationError(
+                503,
+                'PARTNER_TIMEOUT',
+                'Upłynął czas wyszukiwania serwera partnera.',
+              ),
+            ),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 export async function requestJson(
   connection: Integration,
   path: string,
   method: 'GET' | 'POST',
   body?: unknown,
 ): Promise<unknown> {
+  const startedAt = Date.now();
   const base = validateBaseUrl(connection.baseUrl);
   const url = new URL(`${base.pathname.replace(/\/$/, '')}${path}`, base.origin);
   const host = base.hostname.replace(/^\[|\]$/g, '');
@@ -68,15 +100,7 @@ export async function requestJson(
     .split(',')
     .map((x) => x.trim().toLowerCase())
     .includes(host.toLowerCase());
-  const addresses = isIP(host)
-    ? [{ address: host, family: isIP(host) }]
-    : await lookup(host, { all: true }).catch(() => {
-        throw new IntegrationError(
-          503,
-          'PARTNER_UNAVAILABLE',
-          'Nie udało się odnaleźć serwera partnera.',
-        );
-      });
+  const addresses = await resolveHost(host, connection.timeoutMs);
   if (!addresses.length || addresses.some((x) => isPrivate(x.address) && !localAllowed))
     throw new IntegrationError(
       400,
@@ -102,7 +126,13 @@ export async function requestJson(
       else resolve(value);
     };
     const headers: Record<string, string | number> = { Accept: 'application/json' };
-    if (connection.secret) headers[connection.authHeader] = reveal(connection.secret);
+    if (connection.secret) {
+      const secret = reveal(connection.secret);
+      headers[connection.authHeader] =
+        connection.authHeader === 'Authorization' && !secret.startsWith('Bearer ')
+          ? `Bearer ${secret}`
+          : secret;
+    }
     if (payload) {
       headers['Content-Type'] = 'application/json';
       headers['Content-Length'] = Buffer.byteLength(payload);
@@ -120,7 +150,8 @@ export async function requestJson(
         // Nie podążamy za przekierowaniem: mogłoby przekazać sekret innemu hostowi.
         if (status < 200 || status >= 300) {
           res.resume();
-          const uncertain = method !== 'GET' && status >= 500;
+          // Przekierowanie po POST może wskazywać wynik już wykonanego zapisu.
+          const uncertain = method !== 'GET' && (status >= 500 || status < 400 || status === 408);
           finish(
             new IntegrationError(
               status === 404 ? 404 : 503,
@@ -173,17 +204,20 @@ export async function requestJson(
         );
       },
     );
-    timer = setTimeout(() => {
-      finish(
-        new IntegrationError(
-          503,
-          'PARTNER_TIMEOUT',
-          'Partner nie odpowiedział w wyznaczonym czasie.',
-          method !== 'GET',
-        ),
-      );
-      req.destroy();
-    }, connection.timeoutMs);
+    timer = setTimeout(
+      () => {
+        finish(
+          new IntegrationError(
+            503,
+            'PARTNER_TIMEOUT',
+            'Partner nie odpowiedział w wyznaczonym czasie.',
+            method !== 'GET',
+          ),
+        );
+        req.destroy();
+      },
+      Math.max(1, connection.timeoutMs - (Date.now() - startedAt)),
+    );
     req.on('error', () =>
       finish(
         new IntegrationError(

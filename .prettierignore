@@ -1,0 +1,9 @@
+node_modules/
+backend/dist/
+frontend/dist/
+data/
+backups/
+coverage/
+test-results/
+playwright-report/
+package-lock.json

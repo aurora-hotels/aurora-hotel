@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DateTime } from 'luxon';
 import { all, get, run, transaction } from '../db.js';
-import { decrypt } from '../security.js';
+import { decrypt, encrypt } from '../security.js';
 import * as adapter from './adapters.js';
 import { integration } from './store.js';
 import {
@@ -30,6 +30,47 @@ interface VoucherInput {
 }
 const activeStates = ['pending', 'confirmed', 'unknown', 'cancel_pending', 'completed'];
 const now = () => new Date().toISOString();
+// Wynik starej operacji musi pochodzić z tego samego środowiska partnera.
+// Zmiana demo na real nie może przypadkiem wysłać starych danych testowych.
+function rememberTarget(partner: 'A' | 'B' | 'D', operationId: string) {
+  const connection = get<{ mode: string; baseUrl: string }>(
+    'SELECT mode,baseUrl FROM integrations WHERE partner=?',
+    partner,
+  )!;
+  run(
+    'INSERT OR IGNORE INTO integrationOperationTargets(operationId,partner,mode,baseUrl) VALUES(?,?,?,?)',
+    operationId,
+    partner,
+    connection.mode,
+    connection.baseUrl.replace(/\/$/, ''),
+  );
+}
+function assertSameTarget(partner: 'A' | 'B' | 'D', operationId: string) {
+  const target = get<{ partner: string; mode: string; baseUrl: string }>(
+    'SELECT * FROM integrationOperationTargets WHERE operationId=?',
+    operationId,
+  );
+  if (!target) return; // Starsze operacje bez snapshotu można tylko odczytać, nie ponowić tworzenia.
+  const connection = integration(partner);
+  if (
+    target.partner !== partner ||
+    target.mode !== connection.mode ||
+    target.baseUrl !== connection.baseUrl.replace(/\/$/, '')
+  )
+    throw new IntegrationError(
+      409,
+      'PARTNER_TARGET_CHANGED',
+      'Przywróć środowisko partnera, w którym rozpoczęto tę operację.',
+    );
+}
+function originalRequest(operationId: string): adapter.BookingRequest | undefined {
+  const snapshot = get<{ payload: string }>(
+    'SELECT payload FROM partnerOperationRequests WHERE operationId=?',
+    operationId,
+  );
+  return snapshot ? (JSON.parse(decrypt(snapshot.payload)) as adapter.BookingRequest) : undefined;
+}
+
 function failure(e: unknown) {
   return e instanceof IntegrationError
     ? e
@@ -177,7 +218,16 @@ export async function bookService(
     item = itemFor(reservationId, input.itemId);
   const guestName = validateGuest(row, item, input.guestIndex);
   const times = validateTime(row, input.startsAt, input.endsAt);
-  // Zapis pending i sprawdzenie kolizji tworzą jedną transakcję. Dopiero potem HTTP.
+  const operationId = randomUUID();
+  const request: adapter.BookingRequest = {
+    operationId,
+    reservationId,
+    offerId: item.offerId,
+    guestName,
+    ...times,
+    ...(row.voucherReference ? { voucherReference: decrypt(row.voucherReference) } : {}),
+  };
+  // Zapis pending i kopia żądania tworzą jedną transakcję. Dopiero potem HTTP.
   const booking = transaction(() => {
     const latest = reservationRow(reservationId);
     if (!['confirmed', 'checked_in'].includes(latest.status))
@@ -211,7 +261,6 @@ export async function bookService(
         'Ten gość ma już inną usługę A/B w wybranym czasie.',
       );
     const id = randomUUID(),
-      operationId = randomUUID(),
       createdAt = now();
     run(
       'INSERT INTO partnerBookings(id,reservationId,itemId,partner,guestIndex,offerId,startsAt,endsAt,status,operationId,createdAt,updatedAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -228,18 +277,17 @@ export async function bookService(
       createdAt,
       createdAt,
     );
+    rememberTarget(item.partner as 'A' | 'B', operationId);
+    run(
+      'INSERT INTO partnerOperationRequests(operationId,payload) VALUES(?,?)',
+      operationId,
+      encrypt(JSON.stringify(request)),
+    );
     run("UPDATE reservation_items SET status='pending' WHERE id=?", item.id);
     return bookingRow(reservationId, id);
   });
   try {
-    const remote = await adapter.createBooking(booking.partner, {
-      operationId: booking.operationId,
-      reservationId,
-      offerId: booking.offerId,
-      guestName,
-      ...times,
-      ...(row.voucherReference ? { voucherReference: decrypt(row.voucherReference) } : {}),
-    });
+    const remote = await adapter.createBooking(booking.partner, request);
     return syncResult(booking, remote);
   } catch (e) {
     const error = failure(e),
@@ -261,16 +309,33 @@ export async function refreshService(reservationId: string, id: string) {
   const booking = bookingRow(reservationId, id);
   if (booking.status === 'cancelled' || booking.status === 'rejected') return booking;
   try {
+    assertSameTarget(booking.partner, booking.operationId);
     if (booking.cancelOperationId && booking.status === 'cancel_pending') {
       // Najpierw pytamy o wynik tego konkretnego anulowania.
       const remote = await adapter.bookingStatus(booking.partner, booking.cancelOperationId);
       return syncResult(booking, remote, true);
     }
-    const remote = await adapter.bookingStatus(
-      booking.partner,
-      booking.operationId,
-      booking.externalId,
-    );
+    let remote: RemoteBooking;
+    try {
+      remote = await adapter.bookingStatus(
+        booking.partner,
+        booking.operationId,
+        booking.externalId,
+      );
+    } catch (error) {
+      const snapshot = originalRequest(booking.operationId);
+      if (
+        !(error instanceof IntegrationError) ||
+        error.code !== 'PARTNER_NOT_FOUND' ||
+        booking.externalId ||
+        !['pending', 'unknown'].includes(booking.status) ||
+        !snapshot
+      )
+        throw error;
+      // 404 samo nie rozstrzyga wyniku. Powtórzenie jest bezpieczne dzięki temu
+      // samemu ID i dokładnie temu samemu żądaniu oraz deduplikacji po stronie A/B.
+      remote = await adapter.createBooking(booking.partner, snapshot);
+    }
     return syncResult(booking, remote);
   } catch (e) {
     const error = failure(e);
@@ -291,6 +356,7 @@ export async function refreshService(reservationId: string, id: string) {
 export async function cancelService(reservationId: string, id: string) {
   let booking = bookingRow(reservationId, id);
   if (['cancelled', 'rejected'].includes(booking.status)) return booking;
+  assertSameTarget(booking.partner, booking.operationId);
   if (booking.status === 'completed')
     throw new IntegrationError(
       409,
@@ -492,13 +558,17 @@ export async function afterCheckOut(row: ReservationForIntegration) {
   if (op?.status === 'reported') return op;
   const retry = Boolean(op),
     operationId = op?.operationId || randomUUID();
-  run(
-    "INSERT OR IGNORE INTO voucherOperations(reservationId,operationId,status,updatedAt) VALUES(?,?,'pending',?)",
-    row.id,
-    operationId,
-    now(),
-  );
+  transaction(() => {
+    run(
+      "INSERT OR IGNORE INTO voucherOperations(reservationId,operationId,status,updatedAt) VALUES(?,?,'pending',?)",
+      row.id,
+      operationId,
+      now(),
+    );
+    if (!retry) rememberTarget('D', operationId);
+  });
   try {
+    assertSameTarget('D', operationId);
     let result: adapter.Completion | undefined;
     if (retry) {
       try {
