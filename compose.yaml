@@ -1,0 +1,16 @@
+services:
+  hotel:
+    build: .
+    ports:
+      - '127.0.0.1:3001:3001'
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      DATABASE_PATH: /app/data/aurora.sqlite
+      APP_ORIGIN: ${DOCKER_APP_ORIGIN:-http://localhost:3001}
+    volumes:
+      - hotel-data:/app/data
+    restart: unless-stopped
+volumes:
+  hotel-data:

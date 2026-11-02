@@ -1,0 +1,11 @@
+.git
+node_modules
+.env
+.env.*
+data
+backups
+coverage
+test-results
+playwright-report
+backend/dist
+frontend/dist

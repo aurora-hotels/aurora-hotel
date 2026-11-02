@@ -1,0 +1,3991 @@
+# Kontrakt API C. Przykładowe daty i dane są fikcyjne.
+openapi: 3.0.3
+info:
+  title: Aurora Hotels — API projektu C
+  version: 1.0.0
+  description:
+    Hotel, pobyty, plan A/B i część hotelowa vouchera D. Kwoty są całkowitymi groszami PLN. Klient/partner
+    widzi własne pobyty; recepcja/admin wszystkie. Sesja wymaga CSRF przy zapisie; partner używa jednego klucza
+    bez cookie. Nieznane pola zapisu są odrzucane. Kontrakt A/B/D wychodzący opisano osobno w docs/integracje.md
+    i wymaga uzgodnienia z grupami.
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Środowisko lokalne; wspólny adres ustalamy przy integracji.
+tags:
+  - name: Konto
+  - name: Oferta
+  - name: Pobyty
+  - name: Recepcja
+  - name: Integracje
+  - name: Administracja
+  - name: Techniczne
+paths:
+  /auth/csrf:
+    get:
+      summary: Utwórz/odczytaj token CSRF
+      operationId: getAuthCsrf
+      tags:
+        - Konto
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      description: Ustawia cookie anonimowej sesji, jeżeli nie istnieje. Zachowaj je i token przed logowaniem/rejestracją.
+  /auth/register:
+    post:
+      summary: Załóż konto klienta
+      operationId: postAuthRegister
+      tags:
+        - Konto
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+      description: Wymaga anonimowej sesji i jej tokenu CSRF. Tworzy nową sesję i zwraca nowy csrfToken.
+  /auth/login:
+    post:
+      summary: Zaloguj się
+      operationId: postAuthLogin
+      tags:
+        - Konto
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      description: Wymaga tokenu z /auth/csrf. W odpowiedzi nowy token po rotacji sesji.
+  /auth/logout:
+    post:
+      summary: Wyloguj sesję
+      operationId: postAuthLogout
+      tags:
+        - Konto
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '204':
+          description: Bez treści
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /me:
+    get:
+      summary: Pobierz własny profil
+      operationId: getMe
+      tags:
+        - Konto
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+    patch:
+      summary: Zmień własny profil
+      operationId: patchMe
+      tags:
+        - Konto
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePatch'
+  /me/change-password:
+    post:
+      summary: Zmień hasło i unieważnij stare sesje
+      operationId: postMeChangePassword
+      tags:
+        - Konto
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChange'
+  /rooms:
+    get:
+      summary: 'Lista aktywnej oferty: rooms'
+      operationId: getRooms
+      tags:
+        - Oferta
+      security:
+        - {}
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Room'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      description: Bez uwierzytelnienia lub klucz z catalog:read. Podany błędny klucz nie jest pomijany.
+  /packages:
+    get:
+      summary: 'Lista aktywnej oferty: packages'
+      operationId: getPackages
+      tags:
+        - Oferta
+      security:
+        - {}
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Package'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      description: Bez uwierzytelnienia lub klucz z catalog:read. Podany błędny klucz nie jest pomijany.
+  /availability:
+    get:
+      summary: Sprawdź pokoje i cenę pobytu
+      operationId: getAvailability
+      tags:
+        - Oferta
+      security:
+        - {}
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AvailableRoom'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: checkIn
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: checkOut
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: guests
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
+        - name: packageId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      description: Przedział pobytu [przyjazd, wyjazd). Dla klucza partnera wymagane catalog:read.
+  /reservations:
+    post:
+      summary: Utwórz pobyt
+      operationId: postReservations
+      tags:
+        - Pobyty
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+        '200':
+          description: Odtworzony wynik tej samej operacji
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          headers:
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - 'true'
+              description: Odpowiedź z wcześniejszego zapisu.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+            example:
+              roomId: room-101
+              checkIn: '2027-06-15'
+              checkOut: '2027-06-17'
+              guests: 1
+              expectedTotalMinor: 48000
+              guest:
+                name: Anna Testowa
+                email: anna@example.com
+                phone: ''
+              guestNames:
+                - Anna Testowa
+      x-required-scope: reservations:create
+    get:
+      summary: Lista dostępnych pobytów
+      operationId: getReservations
+      tags:
+        - Pobyty
+      security:
+        - CookieAuth: []
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reservation'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - confirmed
+              - checked_in
+              - completed
+              - cancelled
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      description: 'Klient/partner widzi tylko własne, recepcja/admin wszystkie. search: numer lub nazwa gościa.'
+      x-required-scope: reservations:read
+  /reservations/{id}:
+    get:
+      summary: Odczytaj pobyt
+      operationId: getReservationsId
+      tags:
+        - Pobyty
+      security:
+        - CookieAuth: []
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      x-required-scope: reservations:read
+    patch:
+      summary: Zmień daty i liczbę gości
+      operationId: patchReservationsId
+      tags:
+        - Pobyty
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationPatch'
+      x-required-scope: reservations:update
+  /reservations/{id}/cancel:
+    post:
+      summary: Anuluj pobyt po anulowaniu A/B
+      operationId: postReservationsIdCancel
+      tags:
+        - Pobyty
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      description:
+        Powtórzenie anulowania jest bezpieczne. Niepewna lub wykonana usługa A/B blokuje anulowanie całego
+        pobytu.
+      x-required-scope: reservations:cancel
+  /reservations/{id}/check-in:
+    post:
+      summary: Zamelduj gościa
+      operationId: postReservationsIdCheckIn
+      tags:
+        - Recepcja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/check-out:
+    post:
+      summary: Wymelduj i zgłoś część C do D
+      operationId: postReservationsIdCheckOut
+      tags:
+        - Recepcja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckedOutReservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/guests:
+    patch:
+      summary: Popraw dane i nazwiska gości
+      operationId: patchReservationsIdGuests
+      tags:
+        - Recepcja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationGuestsPatch'
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/plan:
+    get:
+      summary: Plan pozycji pakietu i usług A/B
+      operationId: getReservationsIdPlan
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      x-required-scope: reservations:read
+  /reservations/{id}/partner-availability:
+    get:
+      summary: Sprawdź termin konkretnej usługi A/B
+      operationId: getReservationsIdPartnerAvailability
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PartnerAvailabilityItem'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  mode:
+                    type: string
+                    enum:
+                      - demo
+                      - real
+                  partner:
+                    type: string
+                    enum:
+                      - A
+                      - B
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: itemId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: startsAt
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        - name: endsAt
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/partner-bookings:
+    post:
+      summary: Zamów jednostkę pakietu u A/B
+      operationId: postReservationsIdPartnerBookings
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreate'
+      description:
+        GuestIndex musi odpowiadać przypisaniu pozycji. Terminy w granicach pobytu; brak nakładania A/B
+        dla tej samej osoby.
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/partner-bookings/{bookingId}/refresh:
+    post:
+      summary: Odśwież wynik
+      operationId: postReservationsIdPartnerBookingsBookingidRefresh
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      x-required-roles:
+        - admin
+        - receptionist
+      description:
+        Odczytuje wynik w pierwotnym środowisku. Dla pending/unknown bez externalId, po 404, może ponowić
+        dokładnie zachowaną zaszyfrowaną treść z tym samym operationId. Partner musi deduplikować także trwające
+        żądania. Zmiana mode/baseUrl wymaga przywrócenia celu operacji.
+  /reservations/{id}/partner-bookings/{bookingId}/cancel:
+    post:
+      summary: Anuluj usługę A/B
+      operationId: postReservationsIdPartnerBookingsBookingidCancel
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/voucher/check:
+    post:
+      summary: Zweryfikuj powiązany voucher w D
+      operationId: postReservationsIdVoucherCheck
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoucherCheckResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      x-required-roles:
+        - admin
+        - receptionist
+  /reservations/{id}/voucher/confirm-completion:
+    post:
+      summary: Ponów zgłoszenie części hotelowej do D
+      operationId: postReservationsIdVoucherConfirmCompletion
+      tags:
+        - Integracje
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoucherOperation'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      description:
+        Tylko zakończony pobyt z voucherem. Zachowuje operationId; reported nie wykonuje drugi raz.
+        Po 404 z odczytu operacji ponawia zgłoszenie z tym samym id. Cel mode/baseUrl musi odpowiadać pierwotnej operacji.
+      x-required-roles:
+        - admin
+        - receptionist
+  /admin/rooms:
+    get:
+      summary: 'Administracja: lista rooms'
+      operationId: getAdminRooms
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Room'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      x-required-roles:
+        - admin
+    post:
+      summary: 'Administracja: dodaj rooms'
+      operationId: postAdminRooms
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomInput'
+      x-required-roles:
+        - admin
+  /admin/rooms/{id}:
+    patch:
+      summary: 'Administracja: zmień rooms'
+      operationId: patchAdminRoomsId
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomPatch'
+      x-required-roles:
+        - admin
+  /admin/packages:
+    get:
+      summary: 'Administracja: lista packages'
+      operationId: getAdminPackages
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Package'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      x-required-roles:
+        - admin
+    post:
+      summary: 'Administracja: dodaj packages'
+      operationId: postAdminPackages
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackageInput'
+      x-required-roles:
+        - admin
+  /admin/packages/{id}:
+    patch:
+      summary: 'Administracja: zmień packages'
+      operationId: patchAdminPackagesId
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackagePatch'
+      x-required-roles:
+        - admin
+  /admin/users:
+    get:
+      summary: 'Administracja: lista users'
+      operationId: getAdminUsers
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      x-required-roles:
+        - admin
+    post:
+      summary: 'Administracja: dodaj users'
+      operationId: postAdminUsers
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      x-required-roles:
+        - admin
+  /admin/users/{id}:
+    patch:
+      summary: 'Administracja: zmień users'
+      operationId: patchAdminUsersId
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatch'
+      x-required-roles:
+        - admin
+  /admin/users/{id}/reset-password:
+    post:
+      summary: Ustaw hasło tymczasowe
+      operationId: postAdminUsersIdResetPassword
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordReset'
+      description: Unieważnia sesje i wymusza zmianę hasła przy kolejnym logowaniu. Nie wysyła e-maila.
+      x-required-roles:
+        - admin
+  /admin/hotel-settings:
+    get:
+      summary: Ustawienia hotelu
+      operationId: getAdminHotelSettings
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HotelSettings'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      x-required-roles:
+        - admin
+    patch:
+      summary: Zmień nazwę i godziny hotelu
+      operationId: patchAdminHotelSettings
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HotelSettings'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HotelSettingsPatch'
+      x-required-roles:
+        - admin
+  /admin/audit-events:
+    get:
+      summary: Przeglądaj dziennik zmian
+      operationId: getAdminAuditEvents
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 150
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 150
+        - name: actorId
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 150
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      x-required-roles:
+        - admin
+  /admin/integrations:
+    get:
+      summary: Lista ustawień A/B/D
+      operationId: getAdminIntegrations
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Integration'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      x-required-roles:
+        - admin
+  /admin/integrations/{partner}:
+    get:
+      summary: Ustawienia jednego partnera
+      operationId: getAdminIntegrationsPartner
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: partner
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - A
+              - B
+              - D
+      x-required-roles:
+        - admin
+    patch:
+      summary: Skonfiguruj połączenie partnera
+      operationId: patchAdminIntegrationsPartner
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: partner
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - A
+              - B
+              - D
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationPatch'
+      x-required-roles:
+        - admin
+  /admin/integrations/{partner}/test:
+    post:
+      summary: Sprawdź połączenie z partnerem
+      operationId: postAdminIntegrationsPartnerTest
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTest'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: partner
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - A
+              - B
+              - D
+      x-required-roles:
+        - admin
+  /admin/integrations/{partner}/catalog:
+    get:
+      summary: Odczytaj katalog A lub B
+      operationId: getAdminIntegrationsPartnerCatalog
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PartnerOffer'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  mode:
+                    type: string
+                    enum:
+                      - demo
+                      - real
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: partner
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - A
+              - B
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      x-required-roles:
+        - admin
+  /admin/api-keys:
+    get:
+      summary: Lista kluczy wejściowych C
+      operationId: getAdminApiKeys
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      x-required-roles:
+        - admin
+    post:
+      summary: Utwórz klucz dla partnera
+      operationId: postAdminApiKeys
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedApiKey'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreate'
+      x-required-roles:
+        - admin
+  /admin/api-keys/{id}:
+    patch:
+      summary: Zmień zakres lub wyłącz klucz
+      operationId: patchAdminApiKeysId
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyPatch'
+      x-required-roles:
+        - admin
+  /admin/demo-vouchers:
+    post:
+      summary: Dodaj fikcyjny voucher do pokazu
+      operationId: postAdminDemoVouchers
+      tags:
+        - Administracja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoVoucher'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoVoucherCreate'
+      description: Dostępne wyłącznie w trybie demo D. Nie wystawia rzeczywistego vouchera.
+      x-required-roles:
+        - admin
+  /health:
+    get:
+      summary: Stan procesu C
+      operationId: getHealth
+      tags:
+        - Techniczne
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+                required:
+                  - status
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      servers:
+        - url: http://localhost:3001
+  /reservations/{id}/items/{itemId}:
+    patch:
+      summary: Zmień gościa, notatkę lub składnik hotelowy
+      operationId: patchReservationsIdItemsItemid
+      tags:
+        - Recepcja
+      security:
+        - CookieAuth: []
+          CsrfToken: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationItem'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationItemPatch'
+      x-required-roles:
+        - admin
+        - receptionist
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: aurora_session
+      description: Sesja użytkownika; HttpOnly. Swagger nie wpisuje cookie ręcznie — użyj logowania.
+    CsrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: Z /auth/csrf, aktualizowany po logowaniu/rejestracji/zmianie hasła.
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Alternatywny sposób przesłania tego samego klucza partnera.
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: ^[A-Za-z0-9._:-]+$
+      description: 'Ten sam klucz i body odtwarzają wcześniejszy wynik; różna treść daje 409. Zakres: użytkownik/partner.'
+  responses:
+    Error:
+      description: Błąd; kod i czytelny opis w error. W razie 429 odczekaj Retry-After.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            fields:
+              type: object
+              additionalProperties: true
+          required:
+            - code
+            - message
+            - fields
+      required:
+        - error
+    CsrfToken:
+      type: object
+      properties:
+        csrfToken:
+          type: string
+      required:
+        - csrfToken
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+          pattern: ^[+\d\s()-]*$
+          default: ''
+        role:
+          type: string
+          enum:
+            - client
+            - receptionist
+            - admin
+        active:
+          type: boolean
+        mustChangePassword:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      required:
+        - id
+        - email
+        - name
+        - phone
+        - role
+        - active
+        - mustChangePassword
+        - createdAt
+    AuthenticatedUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - $ref: '#/components/schemas/CsrfToken'
+    Register:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+          description: Domyślnie minimum 10 znaków; operator może zmienić PASSWORD_MIN_LENGTH.
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+          pattern: ^[+\d\s()-]*$
+          default: ''
+      required:
+        - email
+        - password
+        - name
+      additionalProperties: false
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
+      required:
+        - email
+        - password
+      additionalProperties: false
+    ProfilePatch:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+          pattern: ^[+\d\s()-]*$
+          default: ''
+      minProperties: 1
+      additionalProperties: false
+    PasswordChange:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
+        newPassword:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+          description: Domyślnie minimum 10 znaków; operator może zmienić PASSWORD_MIN_LENGTH.
+      required:
+        - currentPassword
+        - newPassword
+      additionalProperties: false
+    Guest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+          pattern: ^[+\d\s()-]*$
+          default: ''
+      required:
+        - name
+        - email
+      additionalProperties: false
+    RoomInput:
+      type: object
+      properties:
+        number:
+          type: string
+          minLength: 1
+          maxLength: 20
+        type:
+          type: string
+          minLength: 2
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 2000
+          default: ''
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 30
+        nightlyRateMinor:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+        equipment:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 30
+          default: []
+        active:
+          type: boolean
+          default: true
+      required:
+        - number
+        - type
+        - capacity
+        - nightlyRateMinor
+      additionalProperties: false
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        number:
+          type: string
+          minLength: 1
+          maxLength: 20
+        type:
+          type: string
+          minLength: 2
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 2000
+          default: ''
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 30
+        nightlyRateMinor:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+        equipment:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 30
+          default: []
+        active:
+          type: boolean
+          default: true
+      required:
+        - id
+        - number
+        - type
+        - description
+        - capacity
+        - nightlyRateMinor
+        - equipment
+        - active
+    RoomPatch:
+      type: object
+      properties:
+        number:
+          type: string
+          minLength: 1
+          maxLength: 20
+        type:
+          type: string
+          minLength: 2
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 2000
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 30
+        nightlyRateMinor:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+        equipment:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 30
+        active:
+          type: boolean
+      additionalProperties: false
+    PackageItemInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        partner:
+          type: string
+          enum:
+            - HOTEL
+            - A
+            - B
+        offerId:
+          type: string
+          maxLength: 100
+          default: ''
+          description: Wymagany niepusty identyfikator dla A/B.
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 30
+      required:
+        - name
+        - partner
+        - quantity
+      additionalProperties: false
+    PackageItem:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        partner:
+          type: string
+          enum:
+            - HOTEL
+            - A
+            - B
+        offerId:
+          type: string
+          maxLength: 100
+          default: ''
+          description: Wymagany niepusty identyfikator dla A/B.
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 30
+      required:
+        - id
+        - name
+        - partner
+        - offerId
+        - quantity
+    PackageInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          default: ''
+        priceMinor:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+        active:
+          type: boolean
+          default: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageItemInput'
+          maxItems: 30
+          default: []
+          description: Suma quantity nie może przekraczać 100.
+      required:
+        - name
+        - priceMinor
+      additionalProperties: false
+    Package:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          default: ''
+        priceMinor:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+        active:
+          type: boolean
+          default: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageItem'
+      required:
+        - id
+        - name
+        - description
+        - priceMinor
+        - active
+        - items
+    PackagePatch:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+        priceMinor:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+        active:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageItemInput'
+          maxItems: 30
+          description: Suma quantity nie może przekraczać 100.
+      additionalProperties: false
+    Pricing:
+      type: object
+      properties:
+        nights:
+          type: integer
+          minimum: 1
+        nightlyRateMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        packagePriceMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        totalMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        currency:
+          type: string
+          enum:
+            - PLN
+      required:
+        - nights
+        - nightlyRateMinor
+        - packagePriceMinor
+        - totalMinor
+        - currency
+    AvailableRoom:
+      allOf:
+        - $ref: '#/components/schemas/Room'
+        - type: object
+          properties:
+            pricing:
+              $ref: '#/components/schemas/Pricing'
+          required:
+            - pricing
+    ReservationItem:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        reservationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+        partner:
+          type: string
+          enum:
+            - HOTEL
+            - A
+            - B
+        offerId:
+          type: string
+        guestIndex:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+            - unplanned
+            - pending
+            - confirmed
+            - unknown
+            - cancel_pending
+            - completed
+            - cancelled
+            - rejected
+        note:
+          type: string
+      required:
+        - id
+        - reservationId
+        - name
+        - partner
+        - offerId
+        - guestIndex
+        - status
+        - note
+    ReservationCreate:
+      type: object
+      properties:
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 30
+        roomId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        packageId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        expectedTotalMinor:
+          type: integer
+          minimum: 0
+          maximum: 1000000000
+        guest:
+          $ref: '#/components/schemas/Guest'
+        guestNames:
+          type: array
+          items:
+            type: string
+            minLength: 2
+            maxLength: 120
+          minItems: 1
+          maxItems: 30
+        voucherReference:
+          type: string
+          minLength: 1
+          maxLength: 200
+          writeOnly: true
+        hotelComponentId:
+          type: string
+          minLength: 1
+          maxLength: 100
+      description:
+        Daty przyszłe, wyjazd po przyjeździe. Liczba guestNames równa guests. voucherReference i hotelComponentId
+        występują razem; dostępne recepcji/adminowi lub partnerowi D.
+      required:
+        - checkIn
+        - checkOut
+        - guests
+        - roomId
+        - expectedTotalMinor
+        - guest
+        - guestNames
+      additionalProperties: false
+    ReservationPatch:
+      type: object
+      properties:
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 30
+        expectedVersion:
+          type: integer
+          minimum: 1
+        expectedTotalMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        guestNames:
+          type: array
+          items:
+            type: string
+            minLength: 2
+            maxLength: 120
+          minItems: 1
+          maxItems: 30
+      description:
+        Tylko potwierdzony pobyt. W dniu przyjazdu klient/partner nie może edytować; usługi A/B muszą
+        być anulowane/wyjaśnione. Zmiana pobytu z voucherem ponownie weryfikuje nowe daty w D; odmowa lub awaria
+        nie zmienia pobytu.
+      required:
+        - checkIn
+        - checkOut
+        - guests
+        - expectedVersion
+        - expectedTotalMinor
+      additionalProperties: false
+    ReservationGuestsPatch:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        guestNames:
+          type: array
+          items:
+            type: string
+            minLength: 2
+            maxLength: 120
+          minItems: 1
+          maxItems: 30
+        guest:
+          $ref: '#/components/schemas/Guest'
+      required:
+        - expectedVersion
+        - guestNames
+      additionalProperties: false
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        number:
+          type: string
+          example: AH-2027-1234ABCD
+        userId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        partnerId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        roomId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        packageId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        room:
+          $ref: '#/components/schemas/Room'
+        package:
+          type: object
+          properties:
+            id:
+              type: string
+              minLength: 1
+              maxLength: 100
+            name:
+              type: string
+              minLength: 2
+              maxLength: 120
+          required:
+            - id
+            - name
+          nullable: true
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 30
+        guest:
+          $ref: '#/components/schemas/Guest'
+        guestNames:
+          type: array
+          items:
+            type: string
+            minLength: 2
+            maxLength: 120
+          minItems: 1
+          maxItems: 30
+        status:
+          type: string
+          enum:
+            - confirmed
+            - checked_in
+            - completed
+            - cancelled
+        version:
+          type: integer
+          minimum: 1
+        pricing:
+          $ref: '#/components/schemas/Pricing'
+        nightlyRateMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        packagePriceMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        totalMinor:
+          type: integer
+          minimum: 0
+          description: Kwota w groszach PLN.
+        fundingSource:
+          type: string
+          enum:
+            - direct
+            - voucher
+        hasVoucher:
+          type: boolean
+        hotelComponentId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationItem'
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      required:
+        - id
+        - number
+        - userId
+        - partnerId
+        - roomId
+        - packageId
+        - room
+        - package
+        - checkIn
+        - checkOut
+        - guests
+        - guest
+        - guestNames
+        - status
+        - version
+        - pricing
+        - nightlyRateMinor
+        - packagePriceMinor
+        - totalMinor
+        - fundingSource
+        - hasVoucher
+        - hotelComponentId
+        - items
+        - createdAt
+        - updatedAt
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        reservationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        itemId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        partner:
+          type: string
+          enum:
+            - A
+            - B
+        guestIndex:
+          type: integer
+          minimum: 0
+        offerId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        startsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        endsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        status:
+          type: string
+          enum:
+            - unplanned
+            - pending
+            - confirmed
+            - unknown
+            - cancel_pending
+            - completed
+            - cancelled
+            - rejected
+        operationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        cancelOperationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        externalId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      description:
+        HTTP 201/200 oznacza zapis stanu, a nie automatycznie potwierdzenie u partnera. Zawsze sprawdzaj
+        status.
+      required:
+        - id
+        - reservationId
+        - itemId
+        - partner
+        - guestIndex
+        - offerId
+        - startsAt
+        - endsAt
+        - status
+        - operationId
+        - cancelOperationId
+        - externalId
+        - error
+        - createdAt
+        - updatedAt
+    BookingCreate:
+      type: object
+      properties:
+        itemId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        guestIndex:
+          type: integer
+          minimum: 0
+        startsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        endsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      required:
+        - itemId
+        - guestIndex
+        - startsAt
+        - endsAt
+      additionalProperties: false
+    VoucherOperation:
+      type: object
+      properties:
+        reservationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        operationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        status:
+          type: string
+          enum:
+            - pending
+            - unknown
+            - rejected
+            - reported
+        error:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      required:
+        - operationId
+        - status
+        - error
+        - updatedAt
+    CheckedOutReservation:
+      allOf:
+        - $ref: '#/components/schemas/Reservation'
+        - type: object
+          properties:
+            voucherOperation:
+              allOf:
+                - $ref: '#/components/schemas/VoucherOperation'
+              nullable: true
+          required:
+            - voucherOperation
+    Plan:
+      type: object
+      properties:
+        reservationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        items:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/ReservationItem'
+              - type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                required:
+                  - bookings
+        voucher:
+          allOf:
+            - $ref: '#/components/schemas/VoucherOperation'
+          nullable: true
+      required:
+        - reservationId
+        - items
+        - voucher
+    PartnerAvailabilityItem:
+      type: object
+      properties:
+        offerId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        startsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        endsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        available:
+          type: boolean
+      required:
+        - offerId
+        - startsAt
+        - endsAt
+        - available
+    VoucherCheckResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        provider:
+          type: string
+          enum:
+            - C
+        kind:
+          type: string
+          enum:
+            - hotel
+        componentId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        used:
+          type: boolean
+        reservationId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        validFrom:
+          type: string
+          format: date
+        validUntil:
+          type: string
+          format: date
+        reference:
+          type: string
+          description: Zamaskowana wartość; pełny numer nie jest zwracany.
+      required:
+        - valid
+        - provider
+        - kind
+        - componentId
+        - used
+        - reservationId
+        - validFrom
+        - validUntil
+        - reference
+    HotelSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+          enum:
+            - 1
+        hotelName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        checkInTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        checkOutTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        timezone:
+          type: string
+          enum:
+            - Europe/Warsaw
+        currency:
+          type: string
+          enum:
+            - PLN
+      required:
+        - id
+        - hotelName
+        - checkInTime
+        - checkOutTime
+        - timezone
+        - currency
+    HotelSettingsPatch:
+      type: object
+      properties:
+        hotelName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        checkInTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        checkOutTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+      minProperties: 1
+      additionalProperties: false
+    UserCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+          pattern: ^[+\d\s()-]*$
+          default: ''
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+          description: Domyślnie minimum 10 znaków; operator może zmienić PASSWORD_MIN_LENGTH.
+        role:
+          type: string
+          enum:
+            - client
+            - receptionist
+            - admin
+      required:
+        - name
+        - email
+        - password
+        - role
+      additionalProperties: false
+    UserPatch:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+          pattern: ^[+\d\s()-]*$
+          default: ''
+        role:
+          type: string
+          enum:
+            - client
+            - receptionist
+            - admin
+        active:
+          type: boolean
+      minProperties: 1
+      additionalProperties: false
+    PasswordReset:
+      type: object
+      properties:
+        temporaryPassword:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+          description: Domyślnie minimum 10 znaków; operator może zmienić PASSWORD_MIN_LENGTH.
+      required:
+        - temporaryPassword
+      additionalProperties: false
+    IntegrationPatch:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - demo
+            - real
+        enabled:
+          type: boolean
+        baseUrl:
+          type: string
+          maxLength: 1000
+        secret:
+          type: string
+          maxLength: 2000
+          writeOnly: true
+          description: Pomiń, aby zachować. Pusty tekst usuwa sekret. Zamaskowana wartość nie zmienia sekretu.
+        timeoutMs:
+          type: integer
+          minimum: 1000
+          maximum: 30000
+          description: Łączny limit DNS i HTTP jednej próby, w milisekundach.
+        authHeader:
+          type: string
+          enum:
+            - X-API-Key
+            - Authorization
+          description:
+            Przy Authorization sekret może zawierać sam token lub Bearer; wysyłany jest jeden prefiks
+            Bearer.
+        demoScenario:
+          type: string
+          enum:
+            - normal
+            - reject
+            - timeout
+            - timeout_after_success
+            - invalid_json
+            - unavailable
+            - completed
+      additionalProperties: false
+    Integration:
+      type: object
+      properties:
+        partner:
+          type: string
+          enum:
+            - A
+            - B
+            - D
+        mode:
+          type: string
+          enum:
+            - demo
+            - real
+        enabled:
+          type: boolean
+        baseUrl:
+          type: string
+          maxLength: 1000
+        secret:
+          type: string
+          description: Puste lub zamaskowane; nigdy rzeczywisty sekret.
+        timeoutMs:
+          type: integer
+          minimum: 1000
+          maximum: 30000
+        authHeader:
+          type: string
+          enum:
+            - X-API-Key
+            - Authorization
+        demoScenario:
+          type: string
+          enum:
+            - normal
+            - reject
+            - timeout
+            - timeout_after_success
+            - invalid_json
+            - unavailable
+            - completed
+        hasSecret:
+          type: boolean
+        lastTestAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+          nullable: true
+        lastTestResult:
+          type: string
+          nullable: true
+      required:
+        - partner
+        - mode
+        - enabled
+        - baseUrl
+        - secret
+        - timeoutMs
+        - authHeader
+        - demoScenario
+        - hasSecret
+        - lastTestAt
+        - lastTestResult
+    ConnectionTest:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        mode:
+          type: string
+          enum:
+            - demo
+            - real
+        message:
+          type: string
+      required:
+        - ok
+        - mode
+        - message
+    PartnerOffer:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+        durationMinutes:
+          type: integer
+          minimum: 1
+      required:
+        - id
+        - name
+        - durationMinutes
+    ApiKeyCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        partner:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_-]{0,31}$
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+              - catalog:read
+              - reservations:create
+              - reservations:read
+              - reservations:update
+              - reservations:cancel
+          maxItems: 5
+          uniqueItems: true
+      required:
+        - name
+        - partner
+        - scopes
+      additionalProperties: false
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        partner:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_-]{0,31}$
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+              - catalog:read
+              - reservations:create
+              - reservations:read
+              - reservations:update
+              - reservations:cancel
+          maxItems: 5
+          uniqueItems: true
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+        lastUsedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+          nullable: true
+      required:
+        - id
+        - name
+        - partner
+        - scopes
+        - active
+        - createdAt
+        - lastUsedAt
+    CreatedApiKey:
+      allOf:
+        - $ref: '#/components/schemas/ApiKey'
+        - type: object
+          properties:
+            key:
+              type: string
+              description: Pokazany wyłącznie w odpowiedzi utworzenia. Zachowaj bezpiecznie.
+          required:
+            - key
+    ApiKeyPatch:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        active:
+          type: boolean
+        scopes:
+          type: array
+          items:
+            type: string
+            enum:
+              - catalog:read
+              - reservations:create
+              - reservations:read
+              - reservations:update
+              - reservations:cancel
+          maxItems: 5
+          uniqueItems: true
+      additionalProperties: false
+    DemoVoucherCreate:
+      type: object
+      properties:
+        reference:
+          type: string
+          minLength: 3
+          maxLength: 100
+        componentId:
+          type: string
+          minLength: 3
+          maxLength: 100
+        validFrom:
+          type: string
+          format: date
+        validUntil:
+          type: string
+          format: date
+      required:
+        - reference
+        - componentId
+        - validFrom
+        - validUntil
+      additionalProperties: false
+    DemoVoucher:
+      allOf:
+        - $ref: '#/components/schemas/DemoVoucherCreate'
+        - type: object
+          properties:
+            mode:
+              type: string
+              enum:
+                - demo
+            provider:
+              type: string
+              enum:
+                - C
+            kind:
+              type: string
+              enum:
+                - hotel
+            used:
+              type: boolean
+          required:
+            - mode
+            - provider
+            - kind
+            - used
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        actorType:
+          type: string
+          enum:
+            - user
+            - partner
+        actorId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        actorName:
+          type: string
+        action:
+          type: string
+        entityId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
+      required:
+        - id
+        - actorType
+        - actorId
+        - actorName
+        - action
+        - entityId
+        - details
+        - createdAt
+    Empty:
+      type: object
+      properties: {}
+      additionalProperties: false
+    ReservationItemPatch:
+      type: object
+      properties:
+        guestIndex:
+          type: integer
+          minimum: 0
+        note:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - unplanned
+            - completed
+            - cancelled
+      minProperties: 1
+      description:
+        Status ręczny wyłącznie dla HOTEL. A/B aktualizuje się przez potwierdzenie partnera. Aktywna
+        usługa blokuje zmianę przypisanego gościa; anulowany pobyt pozwala tylko dopisać notatkę.
+      additionalProperties: false
