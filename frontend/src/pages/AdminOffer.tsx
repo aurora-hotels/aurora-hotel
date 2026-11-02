@@ -28,14 +28,13 @@ export default function AdminOfferPage() {
     setRoom(null);
     setPkg(null);
     setRevision((v) => v + 1);
-    setSuccess('Oferta została zapisana. Nowe ceny dotyczą kolejnych rezerwacji.');
+    setSuccess('Zapisano ofertę. Istniejące rezerwacje zachowują swoje ceny.');
   }
   return (
     <>
       <PageTitle
-        eyebrow="ADMINISTRACJA"
         title="Pokoje i pakiety"
-        description="Ustal ofertę, ceny i dostępność. Nieaktywne pozycje zostają w historii pobytów."
+        description="Dodaj pokoje i pakiety lub zmień ich ceny. Wyłączona oferta pozostanie widoczna w starszych rezerwacjach."
       >
         <button
           className="button primary"
@@ -363,13 +362,13 @@ function PackageEditor({
           </button>
         </div>
         <p className="muted small">
-          Liczba oznacza łączną liczbę usług w pakiecie, nie liczbę na osobę. Dla A/B przepisz
-          identyfikator z katalogu partnera w Integracjach.
+          Wpisz liczbę usług dla całego pakietu. ID masażu lub treningu znajdziesz w katalogu
+          partnera na stronie Integracje i API.
         </p>
         {items.map((item, i) => (
           <div className="nested-card" key={i}>
             <div className="form-grid">
-              <Field label={`Usługa ${i + 1} — nazwa`}>
+              <Field label={`Usługa ${i + 1}: nazwa`}>
                 <input
                   value={item.name}
                   minLength={2}
@@ -384,8 +383,8 @@ function PackageEditor({
                   onChange={(e) => change(i, { partner: e.target.value as PackageItem['partner'] })}
                 >
                   <option value="HOTEL">Hotel</option>
-                  <option value="A">A — masaże</option>
-                  <option value="B">B — treningi</option>
+                  <option value="A">A: masaże</option>
+                  <option value="B">B: treningi</option>
                 </select>
               </Field>
               <Field label="ID oferty u partnera">

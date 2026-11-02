@@ -55,9 +55,8 @@ export default function AdminAuditPage() {
   return (
     <>
       <PageTitle
-        eyebrow="ADMINISTRACJA"
         title="Historia operacji"
-        description="Sprawdź kto i kiedy zmienił pobyt, ofertę lub ustawienia. Sekrety i hasła nie trafiają do historii."
+        description="Zmiany rezerwacji, oferty i ustawień wraz z datą i osobą, która je zapisała."
       />
       <section className="panel compact">
         <form className="filter-bar audit-filters" onSubmit={filter}>
@@ -103,7 +102,7 @@ export default function AdminAuditPage() {
                   <th>Czas</th>
                   <th>Autor</th>
                   <th>Operacja</th>
-                  <th>Obiekt i szczegóły</th>
+                  <th>Czego dotyczy zmiana</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,7 +122,7 @@ export default function AdminAuditPage() {
                       </small>
                     </td>
                     <td>
-                      <code className="wrap-code">{e.entityId ?? '—'}</code>
+                      <code className="wrap-code">{e.entityId ?? 'brak'}</code>
                       {e.details != null && Object.keys(e.details as object).length > 0 && (
                         <details>
                           <summary>Szczegóły zmiany</summary>

@@ -73,14 +73,13 @@ export default function AdminIntegrationsPage() {
     setKeyEditor(null);
     setVoucher(false);
     setRevision((v) => v + 1);
-    setSuccess('Konfiguracja została zapisana.');
+    setSuccess('Zapisano ustawienia.');
   }
   return (
     <>
       <PageTitle
-        eyebrow="ADMINISTRACJA"
         title="Integracje i API"
-        description="Połącz hotel z systemami grup A, B i D. Tryb demo pozwala sprawdzić scenariusz bez ich serwerów."
+        description="Ustaw połączenia z grupami A, B i D. Do prób bez ich serwerów wybierz tryb demo."
       />
       <Notice error={error || integrations.error || keys.error} />
       <Notice success={success} />
@@ -99,13 +98,13 @@ export default function AdminIntegrationsPage() {
               <h2>{partnerNames[i.partner]}</h2>
               <p className="muted">
                 {i.mode === 'demo'
-                  ? 'Tryb demo · symulowane odpowiedzi'
-                  : 'Tryb rzeczywisty · serwer partnera'}
+                  ? 'Demo: odpowiedzi z lokalnego symulatora'
+                  : 'Połączenie z serwerem partnera'}
               </p>
               <div className="integration-meta">
                 <span>Adres</span>
                 <code>{i.baseUrl || 'Nie jest potrzebny w demo'}</code>
-                <span>Sekret</span>
+                <span>Klucz partnera</span>
                 <b>{i.hasSecret ? 'Zapisany · ••••••••' : 'Nie zapisano'}</b>
                 <span>Limit czasu</span>
                 <b>{i.timeoutMs / 1000} s</b>
@@ -154,7 +153,6 @@ export default function AdminIntegrationsPage() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">DOSTĘP DO NASZEGO HOTELU</p>
             <h2>Klucze API partnerów</h2>
           </div>
           <button className="button primary" onClick={() => setKeyEditor('new')}>
@@ -163,8 +161,8 @@ export default function AdminIntegrationsPage() {
           </button>
         </div>
         <p className="muted">
-          Każdy klucz pozwala wykonać tylko zaznaczone operacje. Partner widzi rezerwacje utworzone
-          przez swoją grupę. Pełny klucz jest pokazywany tylko przy utworzeniu.
+          Utwórz klucz dla grupy i zaznacz jej uprawnienia. Grupa zobaczy tylko swoje rezerwacje.
+          Skopiuj klucz po utworzeniu, bo później nie będzie można go odczytać.
         </p>
         {keys.loading && !keys.data ? (
           <Loading />
@@ -228,14 +226,14 @@ export default function AdminIntegrationsPage() {
       <section className="info-strip">
         <Cable size={28} />
         <div>
-          <h3>Kontrakt połączenia</h3>
+          <h3>Dokumentacja API</h3>
           <p>
             Nasze endpointy zaczynają się od <code>/api/v1</code>. Partner przekazuje swój klucz w
             nagłówku <code>X-API-Key</code>. Przykłady żądań i formaty odpowiedzi znajdziesz w
             dokumentacji API.
           </p>
           <a className="text-button" href="/api/docs" target="_blank" rel="noreferrer">
-            Otwórz dokumentację API ↗
+            Otwórz dokumentację API
           </a>
         </div>
       </section>
@@ -258,13 +256,13 @@ export default function AdminIntegrationsPage() {
       {reveal && (
         <Modal title="Zapisz nowy klucz API" onClose={() => setReveal('')}>
           <div className="stack">
-            <Notice success="Klucz został utworzony. Po zamknięciu okna nie będzie można odczytać go ponownie." />
+            <Notice success="Klucz jest gotowy. Skopiuj go przed zamknięciem okna." />
             <Field label="Nowy klucz API">
               <textarea readOnly rows={3} value={reveal} onFocus={(e) => e.target.select()} />
             </Field>
             <p className="muted small">
-              Przekaż klucz właściwej grupie i trzymaj go poza repozytorium. W razie zgubienia
-              wyłącz ten klucz i utwórz nowy.
+              Przekaż klucz osobie, z którą łączysz systemy. Nie zapisuj go w repozytorium. Jeśli
+              klucz zginie, wyłącz go i utwórz nowy.
             </p>
             <Notice error={error} />
             <FormActions>
@@ -360,7 +358,7 @@ function IntegrationEditor({
   }
   return (
     <Modal
-      title={`Integracja ${value.partner} — ${partnerNames[value.partner]}`}
+      title={`Integracja ${value.partner}: ${partnerNames[value.partner]}`}
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -373,13 +371,13 @@ function IntegrationEditor({
         </label>
         <Field label="Tryb integracji">
           <select value={mode} onChange={(e) => setMode(e.target.value as Integration['mode'])}>
-            <option value="demo">Demo — lokalna symulacja</option>
-            <option value="real">Rzeczywisty — API partnera</option>
+            <option value="demo">Demo (lokalny symulator)</option>
+            <option value="real">API partnera</option>
           </select>
         </Field>
         <Field
           label="Adres bazowy API partnera"
-          hint="Adres i ścieżkę uzgodnij z drugą grupą. Dozwolone hosty ustala konfiguracja serwera."
+          hint="Wpisz adres uzgodniony z drugą grupą. Host musi być dopuszczony w konfiguracji serwera."
         >
           <input
             name="baseUrl"
@@ -410,11 +408,11 @@ function IntegrationEditor({
           </Field>
         </div>
         <Field
-          label="Nowy sekret"
+          label="Nowy klucz partnera"
           hint={
             value.hasSecret
-              ? 'Sekret jest zapisany. Puste pole zachowa jego wartość.'
-              : 'Wpisz klucz otrzymany od partnera. Przy Authorization podaj też wymagany prefiks, np. Bearer.'
+              ? 'Klucz jest zapisany. Zostaw puste pole, jeśli go nie zmieniasz.'
+              : 'Wpisz klucz od drugiej grupy. Dla nagłówka Authorization prefiks Bearer dodamy automatycznie.'
           }
         >
           <input
@@ -432,12 +430,12 @@ function IntegrationEditor({
               checked={removeSecret}
               onChange={(e) => setRemoveSecret(e.target.checked)}
             />
-            Usuń zapisany sekret
+            Usuń zapisany klucz
           </label>
         )}
         <Field
           label="Scenariusz demo"
-          hint="Działa tylko w trybie demo. Ułatwia sprawdzenie komunikatów i obsługi awarii."
+          hint="Wybierz odpowiedź symulatora, żeby sprawdzić poprawny przebieg albo awarię."
         >
           <select name="demoScenario" defaultValue={value.demoScenario ?? 'normal'}>
             <option value="normal">Poprawna odpowiedź</option>
@@ -574,9 +572,7 @@ function DemoVoucher({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
     >
       <form className="stack" onSubmit={save}>
         <Notice error={error} />
-        <p className="muted">
-          Zapisz te identyfikatory, a następnie podaj je przy tworzeniu rezerwacji w recepcji.
-        </p>
+        <p className="muted">Te same dane wpisz potem przy rezerwacji pokoju w recepcji.</p>
         <Field label="Numer vouchera">
           <input name="reference" minLength={3} maxLength={100} required />
         </Field>

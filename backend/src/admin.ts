@@ -42,7 +42,7 @@ const packageSchema = z
   .strict()
   .refine((x) => x.items.reduce((sum, item) => sum + item.quantity, 0) <= 100, {
     path: ['items'],
-    message: 'Pakiet może zawierać najwyżej 100 jednostek usług.',
+    message: 'Pakiet może zawierać łącznie do 100 usług.',
   });
 adminRouter.get('/admin/rooms', (req, res) => {
   const { page, pageSize, offset } = pageQuery(req.query);
@@ -93,7 +93,7 @@ adminRouter.patch('/admin/rooms/:id', (req, res) => {
       ),
       409,
       'CAPACITY_IN_USE',
-      'Istnieją aktywne pobyty z większą liczbą gości.',
+      'Ten pokój ma już rezerwację dla większej liczby gości.',
     );
     run(
       'UPDATE rooms SET number=?,type=?,description=?,capacity=?,nightlyRateMinor=?,equipment=?,active=? WHERE id=?',

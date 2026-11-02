@@ -49,7 +49,6 @@ export function Empty({
 }) {
   return (
     <div className="empty">
-      <div className="empty-symbol">—</div>
       <h3>{title}</h3>
       <p>{children}</p>
     </div>

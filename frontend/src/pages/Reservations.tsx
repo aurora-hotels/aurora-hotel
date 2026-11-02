@@ -40,12 +40,11 @@ export default function ReservationsPage() {
   return (
     <>
       <PageTitle
-        eyebrow={staff ? 'RECEPCJA' : 'TWÓJ POBYT'}
         title={staff ? 'Pulpit rezerwacji' : 'Moje rezerwacje'}
         description={
           staff
             ? 'Przyjazdy, wyjazdy i plan pobytu gości.'
-            : 'Sprawdź szczegóły pobytu, zmień termin lub zobacz plan usług.'
+            : 'Tutaj sprawdzisz swoje rezerwacje i terminy usług.'
         }
       >
         <Link className="button primary" to="/">
@@ -117,9 +116,7 @@ export default function ReservationsPage() {
       {loading ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <Empty title="Brak rezerwacji">
-          Zmień filtry lub wybierz pokój i utwórz pierwszy pobyt.
-        </Empty>
+        <Empty title="Brak rezerwacji">Sprawdź wybrane filtry lub dodaj rezerwację.</Empty>
       ) : (
         <div className="panel table-panel">
           <div className="table-scroll">

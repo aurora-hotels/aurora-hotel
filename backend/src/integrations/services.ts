@@ -30,8 +30,7 @@ interface VoucherInput {
 }
 const activeStates = ['pending', 'confirmed', 'unknown', 'cancel_pending', 'completed'];
 const now = () => new Date().toISOString();
-// Wynik starej operacji musi pochodzić z tego samego środowiska partnera.
-// Zmiana demo na real nie może przypadkiem wysłać starych danych testowych.
+// Zapamiętujemy cel, żeby po przełączeniu demo na real nie wysłać starych danych testowych.
 function rememberTarget(partner: 'A' | 'B' | 'D', operationId: string) {
   const connection = get<{ mode: string; baseUrl: string }>(
     'SELECT mode,baseUrl FROM integrations WHERE partner=?',
@@ -50,7 +49,7 @@ function assertSameTarget(partner: 'A' | 'B' | 'D', operationId: string) {
     'SELECT * FROM integrationOperationTargets WHERE operationId=?',
     operationId,
   );
-  if (!target) return; // Starsze operacje bez snapshotu można tylko odczytać, nie ponowić tworzenia.
+  if (!target) return; // Starsze operacje mogą nie mieć zapisanego celu.
   const connection = integration(partner);
   if (
     target.partner !== partner ||
@@ -227,7 +226,7 @@ export async function bookService(
     ...times,
     ...(row.voucherReference ? { voucherReference: decrypt(row.voucherReference) } : {}),
   };
-  // Zapis pending i kopia żądania tworzą jedną transakcję. Dopiero potem HTTP.
+  // Zapisujemy pending i treść żądania przed HTTP, żeby odzyskać operację po restarcie.
   const booking = transaction(() => {
     const latest = reservationRow(reservationId);
     if (!['confirmed', 'checked_in'].includes(latest.status))
@@ -245,7 +244,7 @@ export async function bookService(
       throw new IntegrationError(
         409,
         'ITEM_ALREADY_BOOKED',
-        'Ta jednostka pakietu ma już aktywną lub niepewną rezerwację.',
+        'Ta usługa jest już zarezerwowana albo czeka na potwierdzenie partnera.',
       );
     if (
       active.some(
@@ -311,7 +310,6 @@ export async function refreshService(reservationId: string, id: string) {
   try {
     assertSameTarget(booking.partner, booking.operationId);
     if (booking.cancelOperationId && booking.status === 'cancel_pending') {
-      // Najpierw pytamy o wynik tego konkretnego anulowania.
       const remote = await adapter.bookingStatus(booking.partner, booking.cancelOperationId);
       return syncResult(booking, remote, true);
     }
@@ -332,8 +330,8 @@ export async function refreshService(reservationId: string, id: string) {
         !snapshot
       )
         throw error;
-      // 404 samo nie rozstrzyga wyniku. Powtórzenie jest bezpieczne dzięki temu
-      // samemu ID i dokładnie temu samemu żądaniu oraz deduplikacji po stronie A/B.
+      // Po 404 ponawiamy dokładnie to samo żądanie i ID.
+      // A/B musi rozpoznawać powtórzenia także wtedy, gdy pierwsze żądanie jeszcze trwa.
       remote = await adapter.createBooking(booking.partner, snapshot);
     }
     return syncResult(booking, remote);
@@ -400,7 +398,7 @@ export async function cancelService(reservationId: string, id: string) {
   }
 }
 export async function cancelExternalForReservation(row: ReservationForIntegration): Promise<void> {
-  // D może zmienić stan hotelowego składnika poza C. Anulowanie wymaga świeżej weryfikacji.
+  // Stan vouchera mógł zmienić się w D od ostatniej wizyty, więc sprawdzamy go ponownie.
   if (row.voucherReference) await checkReservationVoucher(row);
   const bookings = all<Booking>(
     'SELECT * FROM partnerBookings WHERE reservationId=?',
@@ -420,7 +418,7 @@ export async function cancelExternalForReservation(row: ReservationForIntegratio
     throw new IntegrationError(
       409,
       'EXTERNAL_CANCELLATION_PENDING',
-      'Hotel pozostaje aktywny: co najmniej jedna usługa A/B nie została anulowana. Odśwież wynik i ponów.',
+      'Rezerwacja pobytu nadal obowiązuje, bo nie udało się anulować wszystkich usług A/B. Sprawdź ich stan i ponów anulowanie.',
     );
 }
 export function assertCanChangeDates(reservationId: string) {
@@ -432,7 +430,7 @@ export function assertCanChangeDates(reservationId: string) {
     throw new IntegrationError(
       409,
       'ACTIVE_PARTNER_SERVICES',
-      'Przed zmianą terminu trzeba anulować zaplanowane usługi A/B i wyjaśnić niepewne operacje.',
+      'Przed zmianą dat anuluj usługi A/B. Jeśli czekają na potwierdzenie, najpierw sprawdź ich stan u partnera.',
     );
 }
 export function assertVoucherAvailable(
@@ -480,7 +478,7 @@ function validateVoucher(result: VoucherResult, input: VoucherInput, reservation
     throw new IntegrationError(
       409,
       'VOUCHER_OUTSIDE_VALIDITY',
-      'Terminy pobytu nie mieszczą się w ważności vouchera.',
+      'Voucher nie jest ważny przez cały wybrany pobyt.',
     );
 }
 export async function verifyVoucherBeforeCreate(
@@ -519,7 +517,7 @@ export async function checkReservationVoucher(row: ReservationForIntegration) {
     checkOut: row.checkOut,
   });
   validateVoucher(result, input, row.id);
-  // Weryfikacja nie konsumuje vouchera i nie ujawnia jego pełnego kodu.
+  // Samo sprawdzenie nie zużywa vouchera. W odpowiedzi ukrywamy jego kod.
   return { ...result, reference: '••••••••' };
 }
 export async function beforeCheckIn(row: ReservationForIntegration): Promise<void> {
@@ -577,7 +575,7 @@ export async function afterCheckOut(row: ReservationForIntegration) {
         if (!(e instanceof IntegrationError) || e.code !== 'PARTNER_NOT_FOUND') throw e;
       }
     }
-    // Także po awarii proces powtarza dokładnie to samo ID. D musi być idempotentne.
+    // To samo ID po awarii pozwala D rozpoznać powtórzenie i nie rozliczyć pobytu drugi raz.
     result ??= await adapter.completeVoucher({
       reference: decrypt(row.voucherReference),
       componentId: row.hotelComponentId,

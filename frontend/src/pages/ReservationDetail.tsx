@@ -99,7 +99,6 @@ export default function ReservationDetailPage() {
         <ArrowLeft size={16} /> Wszystkie rezerwacje
       </Link>
       <PageTitle
-        eyebrow="SZCZEGÓŁY POBYTU"
         title={reservation.number}
         description={`Pokój ${reservation.room?.number ?? reservation.roomNumber ?? ''} · ${reservation.room?.type ?? 'Aurora Hotels'}`}
       >
@@ -149,7 +148,7 @@ export default function ReservationDetailPage() {
           <p className="muted small">
             {reservation.fundingSource === 'voucher'
               ? 'Pobyt powiązany z voucherem partnera D.'
-              : 'Rezerwacja bez vouchera. Płatności są poza zakresem aplikacji.'}
+              : 'Rezerwacja bez vouchera. Aplikacja nie pobiera płatności.'}
           </p>
           {canEdit && (
             <div className="form-actions">
@@ -190,7 +189,7 @@ export default function ReservationDetailPage() {
                   onClick={() =>
                     action(
                       '/check-out',
-                      'Pobyt został zakończony. Stan potwierdzenia w D jest widoczny poniżej.',
+                      'Zakończono pobyt. Jeśli użyto vouchera, sprawdź niżej potwierdzenie z D.',
                     )
                   }
                 >
@@ -220,7 +219,6 @@ export default function ReservationDetailPage() {
               </li>
             ))}
           </ol>
-          <small className="muted">Dane służą do obsługi tego pobytu.</small>
           {staff && !['completed', 'cancelled'].includes(reservation.status) && (
             <div className="form-actions">
               <button className="button secondary" onClick={() => setEditGuests(true)}>
@@ -261,7 +259,7 @@ export default function ReservationDetailPage() {
                   onClick={() =>
                     action(
                       '/voucher/confirm-completion',
-                      'Odczytano wynik potwierdzenia wykonania noclegu. Sprawdź status vouchera.',
+                      'Sprawdzono odpowiedź grupy D. Aktualny status vouchera jest poniżej.',
                     )
                   }
                 >
@@ -275,7 +273,6 @@ export default function ReservationDetailPage() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">USŁUGI W PAKIECIE</p>
             <h2>Plan pobytu</h2>
           </div>
           <button
@@ -288,8 +285,8 @@ export default function ReservationDetailPage() {
         </div>
         <p className="muted">
           {staff
-            ? 'Uzgodnij terminy z gościem. Każda usługa ma osobne potwierdzenie partnera.'
-            : 'Terminy masaży i treningów ustala recepcja. Tutaj zobaczysz ich aktualne potwierdzenia.'}
+            ? 'Ustal termin z gościem, sprawdź dostępność i zarezerwuj usługę u partnera.'
+            : 'Recepcja ustala terminy masaży i treningów. Umówione usługi pojawią się poniżej.'}
         </p>
         <Notice error={planResource.error} />
         {planResource.loading && !plan ? (
@@ -332,7 +329,7 @@ export default function ReservationDetailPage() {
                           onClick={() =>
                             action(
                               `/partner-bookings/${booking.id}/refresh`,
-                              'Odczytano aktualny stan usługi.',
+                              'Sprawdzono status u partnera.',
                             )
                           }
                         >
@@ -345,7 +342,7 @@ export default function ReservationDetailPage() {
                             onClick={() =>
                               action(
                                 `/partner-bookings/${booking.id}/cancel`,
-                                'Odczytano wynik anulowania usługi. Sprawdź jej status.',
+                                'Sprawdź status usługi poniżej. Partner musi potwierdzić anulowanie.',
                               )
                             }
                           >
@@ -391,7 +388,7 @@ export default function ReservationDetailPage() {
           onSaved={() => {
             setEditGuests(false);
             setRevision((v) => v + 1);
-            setSuccess('Dane gości zostały zapisane.');
+            setSuccess('Zapisano dane gości.');
           }}
         />
       )}
@@ -402,7 +399,7 @@ export default function ReservationDetailPage() {
           onSaved={() => {
             setEdit(false);
             setRevision((v) => v + 1);
-            setSuccess('Zmiany pobytu zostały zapisane.');
+            setSuccess('Zapisano zmiany pobytu.');
           }}
         />
       )}
@@ -414,7 +411,7 @@ export default function ReservationDetailPage() {
           onSaved={() => {
             setService(null);
             setRevision((v) => v + 1);
-            setSuccess('Zlecenie zostało wysłane. Sprawdź status usługi w planie pobytu.');
+            setSuccess('Wysłano rezerwację do partnera. Sprawdź jej status w planie pobytu.');
           }}
         />
       )}
@@ -438,8 +435,8 @@ export default function ReservationDetailPage() {
           }}
         >
           <p>
-            Pokój zostanie zwolniony. Jeśli pobyt zawiera usługi partnerów, najpierw sprawdzimy
-            wynik ich anulowania.
+            Anulowanie zwolni pokój. Jeśli masz umówione usługi, najpierw potrzebne będzie
+            potwierdzenie ich anulowania przez partnerów.
           </p>
           <Notice error={error} />
           <FormActions>
@@ -512,8 +509,8 @@ function EditStay({
       <form className="stack" onSubmit={save}>
         <Notice error={error || rooms.error || packages.error} />
         <p className="muted">
-          Cena będzie przeliczona według aktualnej oferty. Aktywne rezerwacje usług partnerów trzeba
-          wcześniej anulować.
+          Nowa cena wynika z aktualnej oferty. Przed zmianą terminu anuluj umówione masaże i
+          treningi.
         </p>
         <div className="form-grid">
           <Field label="Nowy przyjazd">
@@ -546,7 +543,7 @@ function EditStay({
           </Field>
         </div>
         {Array.from({ length: Math.min(Math.max(guests, 0), 30) }, (_, i) => (
-          <Field key={i} label={`Gość ${i + 1} — imię i nazwisko`}>
+          <Field key={i} label={`Gość ${i + 1}: imię i nazwisko`}>
             <input
               value={names[i] ?? ''}
               minLength={2}
@@ -677,7 +674,7 @@ function ServiceBooking({
         {available !== null && (
           <Notice
             {...(available
-              ? { success: 'Termin jest dostępny. Możesz wysłać rezerwację.' }
+              ? { success: 'Termin jest wolny. Możesz zarezerwować usługę.' }
               : { error: 'Ten termin nie jest dostępny. Wybierz inny.' })}
           />
         )}
@@ -752,7 +749,7 @@ function ItemNote({
         )}
         <Field
           label="Przypisany gość"
-          hint="Zmiana przypisania jest możliwa przed potwierdzeniem usługi u partnera."
+          hint="Gościa możesz zmienić, dopóki ta usługa nie ma aktywnej rezerwacji u partnera."
         >
           <select value={guestIndex} onChange={(e) => setGuestIndex(Number(e.target.value))}>
             {r.guestNames.map((name, i) => (
@@ -821,8 +818,8 @@ function GuestEditor({
       <form onSubmit={save} className="stack">
         <Notice error={error} />
         <p className="muted small">
-          Przed zmianą danych osoby przypisanej do aktywnej usługi trzeba uzgodnić jej anulowanie u
-          partnera.
+          Jeśli gość ma już umówioną usługę, najpierw anuluj ją u partnera. Dopiero potem zmień jego
+          dane.
         </p>
         <Field label="Osoba kontaktowa">
           <input name="name" defaultValue={r.guest.name} minLength={2} maxLength={120} required />
@@ -842,7 +839,7 @@ function GuestEditor({
           </Field>
         </div>
         {r.guestNames.map((name, i) => (
-          <Field key={i} label={`Gość ${i + 1} — imię i nazwisko`}>
+          <Field key={i} label={`Gość ${i + 1}: imię i nazwisko`}>
             <input name={`guest-${i}`} defaultValue={name} minLength={2} maxLength={120} required />
           </Field>
         ))}

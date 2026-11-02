@@ -6,8 +6,8 @@ import { config } from '../config.js';
 import { reveal } from './store.js';
 import { IntegrationError, type Integration } from './types.js';
 
-// Dozwolony host sprawdzamy ponownie przed każdym połączeniem. Wynik DNS jest
-// przypięty do requestu, dzięki czemu druga odpowiedź DNS nie zmieni celu.
+// Sprawdzamy host przy każdym połączeniu i używamy tego samego wyniku DNS w żądaniu.
+// Ponowne wyszukanie adresu mogłoby podmienić sprawdzony cel.
 export function validateBaseUrl(value: string): URL {
   let url: URL;
   try {
@@ -26,7 +26,7 @@ export function validateBaseUrl(value: string): URL {
     throw new IntegrationError(
       400,
       'INVALID_PARTNER_URL',
-      'Adres integracji nie może zawierać loginu, hasła, query ani fragmentu.',
+      'Podaj adres API bez loginu, hasła, parametrów po ? i fragmentu po #.',
     );
   if (!config.allowedPartnerHosts.map((x) => x.toLowerCase()).includes(host))
     throw new IntegrationError(
@@ -55,7 +55,7 @@ function isPrivate(address: string): boolean {
     (a === 198 && (b === 18 || b === 19))
   );
 }
-// DNS też podlega limitowi czasu; samo wyszukanie hosta nie wysyła żądania.
+// Wyszukiwanie DNS zużywa ten sam limit czasu co późniejsze żądanie HTTP.
 async function resolveHost(host: string, timeoutMs: number) {
   if (isIP(host)) return [{ address: host, family: isIP(host) }];
   let timer: ReturnType<typeof setTimeout> | undefined;

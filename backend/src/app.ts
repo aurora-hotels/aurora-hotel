@@ -93,7 +93,7 @@ export function createApp() {
     swaggerUi.serve,
     swaggerUi.setup(undefined, {
       swaggerOptions: { url: '/api/openapi.yaml', persistAuthorization: false },
-      customSiteTitle: 'Aurora Hotels — API',
+      customSiteTitle: 'API Aurora Hotels',
     }),
   );
   app.use('/api', (_req, _res, next) =>

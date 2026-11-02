@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { BedDouble } from 'lucide-react';
 import { post, errorMessage } from '../api';
 import { useAuth } from '../auth';
 import { Field, Notice, Submit } from '../components';
@@ -35,28 +35,22 @@ export default function AuthPage({ register = false }: { register?: boolean }) {
   return (
     <div className="auth-layout">
       <section className="auth-story">
-        <span className="eyebrow light">ZAPLANUJ SWÓJ POBYT</span>
-        <h1>
-          Chwila spokoju
-          <br />
-          zaczyna się tutaj.
-        </h1>
+        <h1>Twoje rezerwacje</h1>
         <p>
-          Wybierz pokój, sprawdź terminy i miej wszystkie informacje o pobycie w jednym miejscu.
+          Po zalogowaniu sprawdzisz swoje pobyty, zmienisz termin rezerwacji i zobaczysz usługi
+          umówione przez recepcję.
         </p>
         <div className="auth-emblem">
-          <Sparkles size={52} strokeWidth={1} />
+          <BedDouble size={52} strokeWidth={1} />
           <span>AURORA</span>
         </div>
-        <small>Projekt studencki C · dane demonstracyjne</small>
       </section>
       <section className="auth-form">
-        <span className="eyebrow">TWOJE KONTO</span>
-        <h2>{register ? 'Miło Cię poznać' : 'Witaj ponownie'}</h2>
+        <h2>{register ? 'Załóż konto' : 'Logowanie'}</h2>
         <p className="muted">
           {register
             ? 'Załóż konto, aby zapisać pierwszą rezerwację.'
-            : 'Zaloguj się, aby zarządzać swoim pobytem.'}
+            : 'Podaj e-mail i hasło do swojego konta.'}
         </p>
         <Notice error={error} />
         <form onSubmit={submit} className="stack">
@@ -72,7 +66,7 @@ export default function AuthPage({ register = false }: { register?: boolean }) {
             label="Hasło"
             hint={
               register
-                ? 'Co najmniej 10 znaków. Użyj innego hasła niż do prywatnych kont.'
+                ? 'Minimum 10 znaków. Nie używaj hasła ze swojego prywatnego konta.'
                 : undefined
             }
           >
@@ -85,19 +79,15 @@ export default function AuthPage({ register = false }: { register?: boolean }) {
               required
             />
           </Field>
-          <Submit busy={busy}>
-            {register ? 'Utwórz konto' : 'Zaloguj się'} <ArrowRight size={17} />
-          </Submit>
+          <Submit busy={busy}>{register ? 'Utwórz konto' : 'Zaloguj się'}</Submit>
         </form>
         <p className="auth-switch">
-          {register ? 'Masz już konto?' : 'Pierwszy raz tutaj?'}{' '}
+          {register ? 'Masz już konto?' : 'Nie masz konta?'}{' '}
           <Link to={register ? '/login' : '/register'}>
             {register ? 'Zaloguj się' : 'Utwórz konto'}
           </Link>
         </p>
-        <p className="privacy-note">
-          <ShieldCheck size={17} /> Używaj danych testowych. To aplikacja przygotowana na zajęcia.
-        </p>
+        <p className="privacy-note">To wersja na zajęcia. W formularzu podawaj dane testowe.</p>
       </section>
     </div>
   );

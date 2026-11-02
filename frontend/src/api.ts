@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-/** Wszystkie wywołania przechodzą tędy, więc sesja i CSRF działają tak samo na każdej stronie. */
+// Logowanie zmienia sesję, więc przed zapisem pobieramy aktualny token CSRF.
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body) headers.set('Content-Type', 'application/json');
@@ -35,7 +35,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     throw new ApiError(
       0,
       'NETWORK_ERROR',
-      'Brak połączenia z serwerem. Dane formularza zostały zachowane.',
+      'Brak połączenia z serwerem. Sprawdź połączenie i spróbuj ponownie.',
     );
   }
   const body = await response.json().catch(() => null);
@@ -66,7 +66,7 @@ export const dateLabel = (date?: string) =>
           ? { timeStyle: 'short' as const, timeZone: 'Europe/Warsaw' }
           : { timeZone: 'UTC' }),
       }).format(new Date(date))
-    : '—';
+    : 'brak';
 export function today() {
   const parts = new Intl.DateTimeFormat('en', {
     timeZone: 'Europe/Warsaw',

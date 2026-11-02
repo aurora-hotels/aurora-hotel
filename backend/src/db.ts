@@ -20,8 +20,8 @@ export function run(sql: string, ...params: SQLInputValue[]) {
   return db.prepare(sql).run(...params);
 }
 
-// Blokada zapisu musi powstać PRZED sprawdzeniem wolnego pokoju.
-// Funkcja jest synchroniczna: nie wolno przekazywać tu callbacku async.
+// Najpierw blokujemy zapis, żeby drugi proces nie zajął pokoju między odczytem a zapisem.
+// Callback musi być synchroniczny, więc HTTP wykonujemy poza transakcją.
 export function transaction<T>(fn: () => T): T {
   db.exec('BEGIN IMMEDIATE');
   try {

@@ -31,16 +31,15 @@ export default function AdminUsersPage() {
     setReset(null);
     setRevision((v) => v + 1);
     setSuccess(
-      'Konto zostało zapisane. Zmiana roli lub blokada kończy dotychczasowe sesje użytkownika.',
+      'Zapisano konto. Zmiana roli lub blokada wylogowuje użytkownika ze wszystkich urządzeń.',
     );
     await refreshUser();
   }
   return (
     <>
       <PageTitle
-        eyebrow="ADMINISTRACJA"
         title="Konta i uprawnienia"
-        description="Zarządzaj personelem i kontami klientów. Nowe konta personelu wymagają zmiany hasła."
+        description="Dodaj konto, zmień rolę lub zablokuj dostęp. Pracownik ustawi własne hasło przy pierwszym logowaniu."
       >
         <button className="button primary" onClick={() => setEditor('new')}>
           <Plus size={17} />
@@ -192,7 +191,7 @@ function UserEditor({
         ) : (
           <Field
             label="Hasło tymczasowe"
-            hint="Co najmniej 10 znaków. Przekaż je użytkownikowi bezpiecznym kanałem."
+            hint="Minimum 10 znaków. Przekaż hasło bezpośrednio właścicielowi konta."
           >
             <input
               name="password"

@@ -34,8 +34,8 @@ export default function ProfilePage() {
       await refreshUser();
       setSuccess(
         password
-          ? 'Hasło zostało zmienione. Pozostałe sesje zostały zakończone.'
-          : 'Dane konta zostały zapisane.',
+          ? 'Hasło zmienione. Na pozostałych urządzeniach trzeba zalogować się ponownie.'
+          : 'Zapisano dane konta.',
       );
     } catch (e) {
       setError(errorMessage(e));
@@ -45,14 +45,10 @@ export default function ProfilePage() {
   }
   return (
     <>
-      <PageTitle
-        eyebrow="TWOJE KONTO"
-        title="Profil"
-        description="Dane kontaktowe i bezpieczeństwo konta."
-      />
+      <PageTitle title="Profil" description="Zmień dane kontaktowe lub hasło." />
       <Notice error={error} success={success} />
       {user?.mustChangePassword && (
-        <Notice error="Masz hasło tymczasowe. Ustaw własne hasło, zanim przejdziesz do pozostałych funkcji." />
+        <Notice error="Masz hasło tymczasowe. Ustaw nowe hasło, żeby korzystać z konta." />
       )}
       <div className="two-columns">
         <section className="panel">

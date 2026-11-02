@@ -10,7 +10,6 @@ import {
   useLocation,
 } from 'react-router-dom';
 import {
-  ArrowUpRight,
   BedDouble,
   Cable,
   CalendarDays,
@@ -19,8 +18,6 @@ import {
   LogOut,
   Menu,
   Settings2,
-  ShieldCheck,
-  Sparkles,
   UserRound,
   UsersRound,
   X,
@@ -49,7 +46,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean
     return this.state.failed ? (
       <main className="fatal-error">
         <h1>Nie udało się wyświetlić strony</h1>
-        <p>Odśwież aplikację. Jeśli problem wróci, zgłoś go osobie opiekującej się projektem.</p>
+        <p>
+          Odśwież stronę. Jeśli błąd się powtórzy, zapisz, co było robione przed jego wystąpieniem.
+        </p>
         <button className="button primary" onClick={() => window.location.reload()}>
           Odśwież aplikację
         </button>
@@ -148,15 +147,15 @@ function Layout() {
       <aside className="sidebar">
         <Link className="brand" to="/">
           <span className="brand-mark">
-            <Sparkles strokeWidth={1.4} size={26} />
+            <BedDouble strokeWidth={1.4} size={26} />
           </span>
           <span>
             AURORA<small>H O T E L S</small>
           </span>
         </Link>
-        <div className="sidebar-caption">DOBRZE BYĆ NA MIEJSCU</div>
+        <div className="sidebar-caption">Rezerwacje hotelowe</div>
         <nav aria-label="Główna nawigacja">
-          <p className="nav-heading">TWÓJ HOTEL</p>
+          <p className="nav-heading">Hotel</p>
           {links
             .filter((l) => user || l.to === '/')
             .map((l) => (
@@ -173,7 +172,7 @@ function Layout() {
             ))}
           {user?.role === 'admin' && (
             <>
-              <p className="nav-heading">ZARZĄDZANIE</p>
+              <p className="nav-heading">Zarządzanie</p>
               {adminLinks.map((l) => (
                 <NavLink
                   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
@@ -187,19 +186,6 @@ function Layout() {
             </>
           )}
         </nav>
-        <div className="sidebar-note">
-          <span className="small-label">AURORA · PROJEKT C</span>
-          <p>
-            Wspólny plan.
-            <br />
-            Przemyślany pobyt.
-          </p>
-          <small>Hotel · masaże · treningi</small>
-          <div className="note-orbit" />
-        </div>
-        <div className="sidebar-footer">
-          <span className="status-dot" /> Środowisko projektu studenckiego
-        </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
@@ -221,7 +207,7 @@ function Layout() {
                     ? 'Rezerwacje'
                     : location.pathname === '/profile'
                       ? 'Konto'
-                      : 'Witaj w hotelu'}
+                      : 'Oferta'}
               </strong>
             </span>
           </div>
@@ -262,7 +248,7 @@ function Layout() {
                 Zaloguj się
               </Link>
               <Link className="button primary small-button" to="/register">
-                Załóż konto <ArrowUpRight size={15} />
+                Załóż konto
               </Link>
             </div>
           )}
@@ -273,9 +259,7 @@ function Layout() {
         </main>
         <footer className="page-footer">
           <span>© Aurora Hotels · Projekt studencki C</span>
-          <span>
-            <ShieldCheck size={14} /> Dane demonstracyjne · bez płatności online
-          </span>
+          <span>Dane testowe, bez płatności online</span>
         </footer>
       </div>
     </div>

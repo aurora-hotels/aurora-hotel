@@ -1,6 +1,6 @@
 import { IntegrationError } from './types.js';
-// Aplikacja działa jako jeden proces Node. Blokada chroni długi fragment HTTP,
-// a transakcja SQLite osobno chroni sprawdzenia i zapisy w bazie.
+// Blokada działa w jednym procesie Node i obejmuje oczekiwanie na partnera.
+// Zapis do bazy dodatkowo chroni transakcja SQLite.
 const busyReservations = new Set<string>();
 export async function withReservationLock<T>(id: string, action: () => Promise<T>): Promise<T> {
   if (busyReservations.has(id))

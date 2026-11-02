@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-// Niezależny przegląd bezpieczeństwa. Osobna baza nie zawiera danych użytkownika.
+// Każde uruchomienie korzysta z osobnej bazy testowej.
 const directory = mkdtempSync(path.join(tmpdir(), 'aurora-security-'));
 process.env.DATABASE_PATH = path.join(directory, 'audit.sqlite');
 process.env.NODE_ENV = 'test';
@@ -67,7 +67,7 @@ afterAll(() => {
   rmSync(directory, { recursive: true, force: true });
 });
 
-describe('Niezależny audyt kont i sesji', () => {
+describe('Hasła i sesje', () => {
   it('przechowuje skrót hasła, a publiczne odpowiedzi go nie ujawniają', async () => {
     const user = await customer('hash-audit@example.test');
     const stored = database.get<any>('SELECT * FROM users WHERE id=?', user.id);
@@ -182,7 +182,7 @@ describe('Niezależny audyt kont i sesji', () => {
   });
 });
 
-describe('Granice autoryzacji API i redakcja sekretów', () => {
+describe('Dostęp do API i ochrona kluczy', () => {
   it('nie miesza uprawnień cookie administratora z kluczem partnera', async () => {
     const created = await write(admin, 'post', '/admin/api-keys', {
       name: 'Audyt ograniczonego klucza',
@@ -229,7 +229,7 @@ describe('Granice autoryzacji API i redakcja sekretów', () => {
   });
 });
 
-describe('Niezależny audyt reguł pobytu', () => {
+describe('Zakończony pobyt i zapisane składniki pakietu', () => {
   it('zakończony pobyt nadal blokuje swój przedział, a zmiana pakietu nie zmienia kupionych dodatków', async () => {
     const { randomUUID } = await import('node:crypto');
     const user = await customer('snapshot-audit@example.test');
@@ -358,7 +358,7 @@ describe('Blokada SQLite z drugiego połączenia', () => {
   });
 });
 
-describe('Sekrety połączeń wychodzących', () => {
+describe('Klucze partnerów', () => {
   it('szyfruje klucz partnera i nie zwraca go z konfiguracji ani historii', async () => {
     const secret = 'Outbound-partner-secret-only-for-audit';
     const saved = await write(admin, 'patch', '/admin/integrations/A', { secret });
@@ -393,7 +393,7 @@ describe('Sekrety połączeń wychodzących', () => {
   });
 });
 
-describe('Granice wejścia HTTP', () => {
+describe('Błędne żądania HTTP', () => {
   it('pusty klucz nie powoduje powrotu do konta administratora ani oferty publicznej', async () => {
     expect((await request(app).get('/api/v1/rooms').set('X-API-Key', '')).status).toBe(401);
     expect((await admin.get('/api/v1/admin/users').set('X-API-Key', '')).status).toBe(401);
@@ -402,7 +402,7 @@ describe('Granice wejścia HTTP', () => {
     );
   });
 
-  it('zbyt duży JSON dostaje przewidywalne 413 bez ujawnienia przesłanych danych', async () => {
+  it('zwraca 413 dla zbyt dużego JSON-a, bez jego treści w odpowiedzi', async () => {
     const marker = 'Oversize-private-payload';
     const result = await request(app)
       .post('/api/v1/auth/login')

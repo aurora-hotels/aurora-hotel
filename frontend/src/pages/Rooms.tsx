@@ -118,20 +118,14 @@ export default function RoomsPage() {
     <>
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">AURORA HOTELS · JEDEN HOTEL, WIELE MOŻLIWOŚCI</span>
-          <h1>
-            Zarezerwuj pobyt.
-            <br />
-            <em>Resztą zajmiemy się razem.</em>
-          </h1>
+          <h1>Rezerwacja pokoju</h1>
           <p>
-            Przytulny pokój, spokojny poranek i czas dla siebie.
-            <br />
-            Dobierz pakiet i zaplanuj odpoczynek po swojemu.
+            Wybierz termin i liczbę gości. Możesz zarezerwować sam nocleg lub dobrać pakiet z
+            dodatkowymi usługami.
           </p>
           <div className="hero-details">
             <span>
-              <BedDouble size={17} /> Komfortowe pokoje
+              <BedDouble size={17} /> Oferta pokoi
             </span>
             <span>
               <Waves size={17} /> Masaże i treningi
@@ -148,11 +142,6 @@ export default function RoomsPage() {
           <div className="art-bed">
             <span />
             <span />
-          </div>
-          <div className="art-caption">
-            Poczuj się
-            <br />
-            <b>na miejscu.</b>
           </div>
         </div>
       </section>
@@ -207,12 +196,11 @@ export default function RoomsPage() {
       </section>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">MIEJSCE DLA CIEBIE</p>
-          <h2>{searched ? 'Dostępne pokoje' : 'Poznaj nasze pokoje'}</h2>
+          <h2>{searched ? 'Dostępne pokoje' : 'Pokoje'}</h2>
         </div>
         <span className="muted small">
           {searched
-            ? `${quote.checkIn} — ${quote.checkOut} · ${quote.guests} os.`
+            ? `${quote.checkIn} do ${quote.checkOut} · ${quote.guests} os.`
             : 'Wybierz daty, aby sprawdzić dostępność'}
         </span>
       </div>
@@ -245,7 +233,7 @@ export default function RoomsPage() {
                   </span>
                 </div>
                 <p className="room-description">
-                  {room.description || 'Wygodna przestrzeń na krótki odpoczynek i dłuższy pobyt.'}
+                  {room.description || 'Opis pokoju nie został jeszcze dodany.'}
                 </p>
                 <div className="amenities">
                   {(room.equipment ?? []).map((amenity) => (
@@ -275,7 +263,7 @@ export default function RoomsPage() {
                       Wybierz pokój <ArrowRight size={16} />
                     </button>
                   ) : (
-                    <span className="muted small">Sprawdź termin ↑</span>
+                    <span className="muted small">Najpierw wybierz termin</span>
                   )}
                 </div>
               </div>
@@ -286,10 +274,10 @@ export default function RoomsPage() {
       <section className="info-strip">
         <Coffee size={27} />
         <div>
-          <h3>Cały pobyt w jednym planie</h3>
+          <h3>Terminy masaży i treningów</h3>
           <p>
-            Usługi w pakiecie rezerwuje recepcja po uzgodnieniu terminu. Potwierdzenie pokoju nie
-            oznacza jeszcze rezerwacji masażu lub treningu.
+            Po rezerwacji pokoju ustal termin usługi z recepcją. Recepcja sprawdzi dostępność i
+            zarezerwuje masaż lub trening u partnera.
           </p>
         </div>
         <CalendarDays size={34} />
@@ -298,7 +286,6 @@ export default function RoomsPage() {
         <section className="packages-section">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">DODAJ COŚ DLA SIEBIE</p>
               <h2>Pakiety pobytowe</h2>
             </div>
             <span className="muted small">Dopłata raz za cały pobyt</span>
@@ -350,7 +337,7 @@ export default function RoomsPage() {
                 {isStaff(user)
                   ? 'Rezerwujesz pobyt dla gościa.'
                   : 'Rezerwacja będzie widoczna na Twoim koncie.'}{' '}
-                Kwota jest ceną referencyjną; aplikacja nie pobiera płatności.
+                W tej wersji aplikacji nie zapłacisz online.
               </p>
               <Notice error={bookingError} />
               <div className="form-grid">
@@ -380,7 +367,8 @@ export default function RoomsPage() {
                 <details className="voucher-fields">
                   <summary>Powiąż voucher partnera D (opcjonalnie)</summary>
                   <p className="muted small">
-                    Podaj obydwa identyfikatory. Weryfikacja nastąpi przed zapisem pobytu.
+                    Podaj numer vouchera i ID części hotelowej. Przed zapisem sprawdzimy je w
+                    systemie grupy D.
                   </p>
                   <div className="form-grid">
                     <Field label="Numer vouchera">
@@ -395,7 +383,7 @@ export default function RoomsPage() {
               <h3>Goście</h3>
               <div className="form-grid">
                 {Array.from({ length: quote.guests }, (_, i) => (
-                  <Field label={`Gość ${i + 1} — imię i nazwisko`} key={i}>
+                  <Field label={`Gość ${i + 1}: imię i nazwisko`} key={i}>
                     <input
                       name={`guest-${i}`}
                       defaultValue={i === 0 ? user.name : ''}

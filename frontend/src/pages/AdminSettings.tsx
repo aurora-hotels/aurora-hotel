@@ -22,7 +22,7 @@ export default function AdminSettingsPage() {
     const f = new FormData(event.currentTarget);
     try {
       await patch('/admin/hotel-settings', Object.fromEntries(f.entries()));
-      setSuccess('Ustawienia hotelu zostały zapisane.');
+      setSuccess('Zapisano ustawienia hotelu.');
     } catch (e) {
       setSaveError(errorMessage(e));
     } finally {
@@ -32,9 +32,8 @@ export default function AdminSettingsPage() {
   return (
     <>
       <PageTitle
-        eyebrow="ADMINISTRACJA"
         title="Ustawienia hotelu"
-        description="Godziny doby hotelowej wyznaczają przedział, w którym można planować usługi."
+        description="Usługi w pakiecie muszą zmieścić się między godziną przyjazdu a godziną wyjazdu."
       />
       <Notice error={error || saveError} success={success} />
       {loading ? (
@@ -82,14 +81,14 @@ export default function AdminSettingsPage() {
             </section>
             <section className="panel">
               <Globe2 className="panel-icon" />
-              <h2>Wspólne zasady</h2>
+              <h2>Ustawienia pobytu</h2>
               <dl className="detail-facts">
                 <div>
-                  <dt>Strefa hotelu</dt>
+                  <dt>Strefa czasowa</dt>
                   <dd>Europe/Warsaw</dd>
                 </div>
                 <div>
-                  <dt>Waluta wyceny</dt>
+                  <dt>Waluta</dt>
                   <dd>PLN</dd>
                 </div>
                 <div>
@@ -98,8 +97,8 @@ export default function AdminSettingsPage() {
                 </div>
               </dl>
               <p className="muted">
-                Daty przyjazdu i wyjazdu opisują noclegi. Terminy usług A/B mają dokładną godzinę.
-                Cena jest zapisywana przy potwierdzeniu rezerwacji.
+                Za pakiet naliczamy jedną dopłatę do pobytu. Cenę zapisujemy przy rezerwacji, a
+                terminy masaży i treningów ustala recepcja.
               </p>
             </section>
           </div>

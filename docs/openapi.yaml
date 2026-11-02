@@ -1,16 +1,17 @@
-# Kontrakt API C. Przykładowe daty i dane są fikcyjne.
+# API hotelu. Dane w przykładach służą do testów.
 openapi: 3.0.3
 info:
-  title: Aurora Hotels — API projektu C
+  title: API Aurora Hotels
   version: 1.0.0
   description:
-    Hotel, pobyty, plan A/B i część hotelowa vouchera D. Kwoty są całkowitymi groszami PLN. Klient/partner
-    widzi własne pobyty; recepcja/admin wszystkie. Sesja wymaga CSRF przy zapisie; partner używa jednego klucza
-    bez cookie. Nieznane pola zapisu są odrzucane. Kontrakt A/B/D wychodzący opisano osobno w docs/integracje.md
-    i wymaga uzgodnienia z grupami.
+    API do rezerwacji pokoi, obsługi pobytu i połączeń z projektami A, B i D. Ceny podajemy w groszach PLN,
+    jako liczby całkowite. Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie.
+    Przy zapisie przez sesję wymagamy tokenu CSRF. Partner podaje klucz API bez cookie sesji.
+    Żądania z nieznanymi polami są odrzucane. Ustalenia dotyczące API innych grup są w Confluence
+    (https://zielinskiadis.atlassian.net/wiki/spaces/KAN). Format tych połączeń wymaga jeszcze wspólnego uzgodnienia.
 servers:
   - url: http://localhost:3001/api/v1
-    description: Środowisko lokalne; wspólny adres ustalamy przy integracji.
+    description: Adres lokalny. Adres do połączenia z innymi grupami ustalamy przed wspólnym testem.
 tags:
   - name: Konto
   - name: Oferta
@@ -22,7 +23,7 @@ tags:
 paths:
   /auth/csrf:
     get:
-      summary: Utwórz/odczytaj token CSRF
+      summary: Pobierz token CSRF
       operationId: getAuthCsrf
       tags:
         - Konto
@@ -50,7 +51,7 @@ paths:
           $ref: '#/components/responses/Error'
         '503':
           $ref: '#/components/responses/Error'
-      description: Ustawia cookie anonimowej sesji, jeżeli nie istnieje. Zachowaj je i token przed logowaniem/rejestracją.
+      description: Jeśli nie ma jeszcze sesji, tworzy ją i ustawia cookie. Cookie i zwrócony token będą potrzebne przy logowaniu lub rejestracji.
   /auth/register:
     post:
       summary: Załóż konto klienta
@@ -89,7 +90,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Register'
-      description: Wymaga anonimowej sesji i jej tokenu CSRF. Tworzy nową sesję i zwraca nowy csrfToken.
+      description: Najpierw pobierz cookie i token z /auth/csrf. Po rejestracji dostaniesz nową sesję i nowy csrfToken.
   /auth/login:
     post:
       summary: Zaloguj się
@@ -128,10 +129,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Login'
-      description: Wymaga tokenu z /auth/csrf. W odpowiedzi nowy token po rotacji sesji.
+      description: Wymaga tokenu z /auth/csrf. Po zalogowaniu zmienia identyfikator sesji i zwraca nowy token CSRF.
   /auth/logout:
     post:
-      summary: Wyloguj sesję
+      summary: Wyloguj się
       operationId: postAuthLogout
       tags:
         - Konto
@@ -159,7 +160,7 @@ paths:
           $ref: '#/components/responses/Error'
   /me:
     get:
-      summary: Pobierz własny profil
+      summary: Pobierz swój profil
       operationId: getMe
       tags:
         - Konto
@@ -189,7 +190,7 @@ paths:
         '503':
           $ref: '#/components/responses/Error'
     patch:
-      summary: Zmień własny profil
+      summary: Zmień dane profilu
       operationId: patchMe
       tags:
         - Konto
@@ -227,7 +228,7 @@ paths:
               $ref: '#/components/schemas/ProfilePatch'
   /me/change-password:
     post:
-      summary: Zmień hasło i unieważnij stare sesje
+      summary: Zmień hasło i zakończ poprzednie sesje
       operationId: postMeChangePassword
       tags:
         - Konto
@@ -265,7 +266,7 @@ paths:
               $ref: '#/components/schemas/PasswordChange'
   /rooms:
     get:
-      summary: 'Lista aktywnej oferty: rooms'
+      summary: Pokaż pokoje w ofercie
       operationId: getRooms
       tags:
         - Oferta
@@ -319,10 +320,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
-      description: Bez uwierzytelnienia lub klucz z catalog:read. Podany błędny klucz nie jest pomijany.
+      description: Lista jest publiczna. Jeśli podajesz klucz API, musi być poprawny i mieć uprawnienie catalog:read.
   /packages:
     get:
-      summary: 'Lista aktywnej oferty: packages'
+      summary: Pokaż pakiety w ofercie
       operationId: getPackages
       tags:
         - Oferta
@@ -376,10 +377,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
-      description: Bez uwierzytelnienia lub klucz z catalog:read. Podany błędny klucz nie jest pomijany.
+      description: Lista jest publiczna. Jeśli podajesz klucz API, musi być poprawny i mieć uprawnienie catalog:read.
   /availability:
     get:
-      summary: Sprawdź pokoje i cenę pobytu
+      summary: Sprawdź wolne pokoje i cenę
       operationId: getAvailability
       tags:
         - Oferta
@@ -459,10 +460,10 @@ paths:
             maxLength: 100
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
-      description: Przedział pobytu [przyjazd, wyjazd). Dla klucza partnera wymagane catalog:read.
+      description: Pokój zajmuje się od dnia przyjazdu do dnia poprzedzającego wyjazd. Klucz partnera musi mieć uprawnienie catalog:read.
   /reservations:
     post:
-      summary: Utwórz pobyt
+      summary: Zarezerwuj pobyt
       operationId: postReservations
       tags:
         - Pobyty
@@ -495,7 +496,7 @@ paths:
         '503':
           $ref: '#/components/responses/Error'
         '200':
-          description: Odtworzony wynik tej samej operacji
+          description: Wynik wcześniejszej rezerwacji z tym samym kluczem
           content:
             application/json:
               schema:
@@ -529,7 +530,7 @@ paths:
                 - Anna Testowa
       x-required-scope: reservations:create
     get:
-      summary: Lista dostępnych pobytów
+      summary: Pokaż rezerwacje
       operationId: getReservations
       tags:
         - Pobyty
@@ -599,11 +600,11 @@ paths:
           schema:
             type: string
             maxLength: 100
-      description: 'Klient/partner widzi tylko własne, recepcja/admin wszystkie. search: numer lub nazwa gościa.'
+      description: Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie. Pole search szuka po numerze rezerwacji lub danych gościa.
       x-required-scope: reservations:read
   /reservations/{id}:
     get:
-      summary: Odczytaj pobyt
+      summary: Pobierz szczegóły rezerwacji
       operationId: getReservationsId
       tags:
         - Pobyty
@@ -693,7 +694,7 @@ paths:
       x-required-scope: reservations:update
   /reservations/{id}/cancel:
     post:
-      summary: Anuluj pobyt po anulowaniu A/B
+      summary: Anuluj rezerwację pobytu
       operationId: postReservationsIdCancel
       tags:
         - Pobyty
@@ -740,8 +741,8 @@ paths:
             schema:
               $ref: '#/components/schemas/Empty'
       description:
-        Powtórzenie anulowania jest bezpieczne. Niepewna lub wykonana usługa A/B blokuje anulowanie całego
-        pobytu.
+        Najpierw anuluje zamówione usługi A/B, potem pobyt. Jeśli usługa została już wykonana albo jej wynik
+        jest nieznany, rezerwacja pobytu pozostaje aktywna. Można ponowić to samo żądanie anulowania.
       x-required-scope: reservations:cancel
   /reservations/{id}/check-in:
     post:
@@ -794,7 +795,7 @@ paths:
         - receptionist
   /reservations/{id}/check-out:
     post:
-      summary: Wymelduj i zgłoś część C do D
+      summary: Zakończ pobyt i potwierdź nocleg w D
       operationId: postReservationsIdCheckOut
       tags:
         - Recepcja
@@ -843,7 +844,7 @@ paths:
         - receptionist
   /reservations/{id}/guests:
     patch:
-      summary: Popraw dane i nazwiska gości
+      summary: Popraw listę gości i dane kontaktowe
       operationId: patchReservationsIdGuests
       tags:
         - Recepcja
@@ -892,7 +893,7 @@ paths:
         - receptionist
   /reservations/{id}/plan:
     get:
-      summary: Plan pozycji pakietu i usług A/B
+      summary: Pokaż usługi w planie pobytu
       operationId: getReservationsIdPlan
       tags:
         - Integracje
@@ -934,7 +935,7 @@ paths:
       x-required-scope: reservations:read
   /reservations/{id}/partner-availability:
     get:
-      summary: Sprawdź termin konkretnej usługi A/B
+      summary: Sprawdź dostępność masażu lub treningu
       operationId: getReservationsIdPartnerAvailability
       tags:
         - Integracje
@@ -1027,7 +1028,7 @@ paths:
         - receptionist
   /reservations/{id}/partner-bookings:
     post:
-      summary: Zamów jednostkę pakietu u A/B
+      summary: Zarezerwuj usługę z pakietu u partnera
       operationId: postReservationsIdPartnerBookings
       tags:
         - Integracje
@@ -1072,14 +1073,14 @@ paths:
             schema:
               $ref: '#/components/schemas/BookingCreate'
       description:
-        GuestIndex musi odpowiadać przypisaniu pozycji. Terminy w granicach pobytu; brak nakładania A/B
-        dla tej samej osoby.
+        guestIndex musi wskazywać osobę przypisaną do tej usługi w pakiecie. Cała usługa musi zmieścić się
+        w pobycie. Ta sama osoba nie może mieć dwóch usług A/B w tym samym czasie.
       x-required-roles:
         - admin
         - receptionist
   /reservations/{id}/partner-bookings/{bookingId}/refresh:
     post:
-      summary: Odśwież wynik
+      summary: Sprawdź wynik rezerwacji u partnera
       operationId: postReservationsIdPartnerBookingsBookingidRefresh
       tags:
         - Integracje
@@ -1128,9 +1129,10 @@ paths:
         - admin
         - receptionist
       description:
-        Odczytuje wynik w pierwotnym środowisku. Dla pending/unknown bez externalId, po 404, może ponowić
-        dokładnie zachowaną zaszyfrowaną treść z tym samym operationId. Partner musi deduplikować także trwające
-        żądania. Zmiana mode/baseUrl wymaga przywrócenia celu operacji.
+        Pyta partnera o wynik wcześniejszego żądania. Jeśli stan to pending lub unknown, brakuje externalId,
+        a partner zwróci 404, ponawia zapisaną treść żądania z tym samym operationId. Treść w bazie jest szyfrowana.
+        Partner musi rozpoznawać powtórzenia także w trakcie wykonywania pierwszego żądania. Po zmianie mode
+        lub baseUrl trzeba przywrócić ustawienia użyte przy rozpoczęciu operacji.
   /reservations/{id}/partner-bookings/{bookingId}/cancel:
     post:
       summary: Anuluj usługę A/B
@@ -1183,7 +1185,7 @@ paths:
         - receptionist
   /reservations/{id}/voucher/check:
     post:
-      summary: Zweryfikuj powiązany voucher w D
+      summary: Sprawdź voucher pobytu w D
       operationId: postReservationsIdVoucherCheck
       tags:
         - Integracje
@@ -1226,7 +1228,7 @@ paths:
         - receptionist
   /reservations/{id}/voucher/confirm-completion:
     post:
-      summary: Ponów zgłoszenie części hotelowej do D
+      summary: Potwierdź wykonanie noclegu w D
       operationId: postReservationsIdVoucherConfirmCompletion
       tags:
         - Integracje
@@ -1265,14 +1267,15 @@ paths:
             minLength: 1
             maxLength: 100
       description:
-        Tylko zakończony pobyt z voucherem. Zachowuje operationId; reported nie wykonuje drugi raz.
-        Po 404 z odczytu operacji ponawia zgłoszenie z tym samym id. Cel mode/baseUrl musi odpowiadać pierwotnej operacji.
+        Działa po zakończeniu pobytu z voucherem. Zachowuje operationId i nie powtarza zgłoszenia o stanie
+        reported. Jeśli D nie znajdzie wcześniejszej operacji (404), wysyła zgłoszenie z tym samym ID.
+        Ustawienia mode i baseUrl muszą być takie jak przy pierwszej próbie.
       x-required-roles:
         - admin
         - receptionist
   /admin/rooms:
     get:
-      summary: 'Administracja: lista rooms'
+      summary: Pokaż wszystkie pokoje, także wycofane
       operationId: getAdminRooms
       tags:
         - Administracja
@@ -1327,7 +1330,7 @@ paths:
       x-required-roles:
         - admin
     post:
-      summary: 'Administracja: dodaj rooms'
+      summary: Dodaj pokój
       operationId: postAdminRooms
       tags:
         - Administracja
@@ -1367,7 +1370,7 @@ paths:
         - admin
   /admin/rooms/{id}:
     patch:
-      summary: 'Administracja: zmień rooms'
+      summary: Zmień dane pokoju
       operationId: patchAdminRoomsId
       tags:
         - Administracja
@@ -1415,7 +1418,7 @@ paths:
         - admin
   /admin/packages:
     get:
-      summary: 'Administracja: lista packages'
+      summary: Pokaż wszystkie pakiety, także wycofane
       operationId: getAdminPackages
       tags:
         - Administracja
@@ -1470,7 +1473,7 @@ paths:
       x-required-roles:
         - admin
     post:
-      summary: 'Administracja: dodaj packages'
+      summary: Dodaj pakiet
       operationId: postAdminPackages
       tags:
         - Administracja
@@ -1510,7 +1513,7 @@ paths:
         - admin
   /admin/packages/{id}:
     patch:
-      summary: 'Administracja: zmień packages'
+      summary: Zmień pakiet
       operationId: patchAdminPackagesId
       tags:
         - Administracja
@@ -1558,7 +1561,7 @@ paths:
         - admin
   /admin/users:
     get:
-      summary: 'Administracja: lista users'
+      summary: Pokaż konta użytkowników
       operationId: getAdminUsers
       tags:
         - Administracja
@@ -1613,7 +1616,7 @@ paths:
       x-required-roles:
         - admin
     post:
-      summary: 'Administracja: dodaj users'
+      summary: Dodaj konto użytkownika
       operationId: postAdminUsers
       tags:
         - Administracja
@@ -1653,7 +1656,7 @@ paths:
         - admin
   /admin/users/{id}:
     patch:
-      summary: 'Administracja: zmień users'
+      summary: Zmień konto lub uprawnienia użytkownika
       operationId: patchAdminUsersId
       tags:
         - Administracja
@@ -1745,12 +1748,12 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordReset'
-      description: Unieważnia sesje i wymusza zmianę hasła przy kolejnym logowaniu. Nie wysyła e-maila.
+      description: Kończy dotychczasowe sesje. Przy kolejnym logowaniu użytkownik musi ustawić własne hasło. Hasło tymczasowe trzeba przekazać samodzielnie, ponieważ aplikacja nie wysyła e-maili.
       x-required-roles:
         - admin
   /admin/hotel-settings:
     get:
-      summary: Ustawienia hotelu
+      summary: Pobierz ustawienia hotelu
       operationId: getAdminHotelSettings
       tags:
         - Administracja
@@ -1782,7 +1785,7 @@ paths:
       x-required-roles:
         - admin
     patch:
-      summary: Zmień nazwę i godziny hotelu
+      summary: Zmień nazwę hotelu i godziny pobytu
       operationId: patchAdminHotelSettings
       tags:
         - Administracja
@@ -1822,7 +1825,7 @@ paths:
         - admin
   /admin/audit-events:
     get:
-      summary: Przeglądaj dziennik zmian
+      summary: Pokaż historię operacji
       operationId: getAdminAuditEvents
       tags:
         - Administracja
@@ -1910,7 +1913,7 @@ paths:
         - admin
   /admin/integrations:
     get:
-      summary: Lista ustawień A/B/D
+      summary: Pokaż połączenia z A, B i D
       operationId: getAdminIntegrations
       tags:
         - Administracja
@@ -1966,7 +1969,7 @@ paths:
         - admin
   /admin/integrations/{partner}:
     get:
-      summary: Ustawienia jednego partnera
+      summary: Pobierz ustawienia połączenia z partnerem
       operationId: getAdminIntegrationsPartner
       tags:
         - Administracja
@@ -2008,7 +2011,7 @@ paths:
       x-required-roles:
         - admin
     patch:
-      summary: Skonfiguruj połączenie partnera
+      summary: Zmień ustawienia połączenia z partnerem
       operationId: patchAdminIntegrationsPartner
       tags:
         - Administracja
@@ -2102,7 +2105,7 @@ paths:
         - admin
   /admin/integrations/{partner}/catalog:
     get:
-      summary: Odczytaj katalog A lub B
+      summary: Pobierz ofertę masaży lub treningów
       operationId: getAdminIntegrationsPartnerCatalog
       tags:
         - Administracja
@@ -2171,7 +2174,7 @@ paths:
         - admin
   /admin/api-keys:
     get:
-      summary: Lista kluczy wejściowych C
+      summary: Pokaż klucze dostępu do API hotelu
       operationId: getAdminApiKeys
       tags:
         - Administracja
@@ -2266,7 +2269,7 @@ paths:
         - admin
   /admin/api-keys/{id}:
     patch:
-      summary: Zmień zakres lub wyłącz klucz
+      summary: Zmień uprawnienia klucza lub wyłącz go
       operationId: patchAdminApiKeysId
       tags:
         - Administracja
@@ -2314,7 +2317,7 @@ paths:
         - admin
   /admin/demo-vouchers:
     post:
-      summary: Dodaj fikcyjny voucher do pokazu
+      summary: Dodaj voucher testowy
       operationId: postAdminDemoVouchers
       tags:
         - Administracja
@@ -2350,12 +2353,12 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DemoVoucherCreate'
-      description: Dostępne wyłącznie w trybie demo D. Nie wystawia rzeczywistego vouchera.
+      description: Dodaje voucher do lokalnego symulatora D. Wymaga trybu demo i nie tworzy vouchera w rzeczywistym systemie grupy D.
       x-required-roles:
         - admin
   /health:
     get:
-      summary: Stan procesu C
+      summary: Sprawdź, czy serwer działa
       operationId: getHealth
       tags:
         - Techniczne
@@ -2394,7 +2397,7 @@ paths:
         - url: http://localhost:3001
   /reservations/{id}/items/{itemId}:
     patch:
-      summary: Zmień gościa, notatkę lub składnik hotelowy
+      summary: Zmień przypisanie usługi, notatkę lub stan usługi hotelowej
       operationId: patchReservationsIdItemsItemid
       tags:
         - Recepcja
@@ -2454,12 +2457,12 @@ components:
       type: apiKey
       in: cookie
       name: aurora_session
-      description: Sesja użytkownika; HttpOnly. Swagger nie wpisuje cookie ręcznie — użyj logowania.
+      description: Cookie sesji z flagą HttpOnly. Zaloguj się przez aplikację lub endpoint logowania; przeglądarka dołączy cookie do żądań Swaggera.
     CsrfToken:
       type: apiKey
       in: header
       name: X-CSRF-Token
-      description: Z /auth/csrf, aktualizowany po logowaniu/rejestracji/zmianie hasła.
+      description: Token z /auth/csrf. Po logowaniu, rejestracji lub zmianie hasła używaj nowego tokenu z odpowiedzi.
     ApiKeyAuth:
       type: apiKey
       in: header
@@ -2493,10 +2496,10 @@ components:
         minLength: 8
         maxLength: 128
         pattern: ^[A-Za-z0-9._:-]+$
-      description: 'Ten sam klucz i body odtwarzają wcześniejszy wynik; różna treść daje 409. Zakres: użytkownik/partner.'
+      description: Ten sam klucz i treść żądania zwracają wynik wcześniejszej rezerwacji. Użycie klucza z inną treścią zwraca 409. Klucze są przypisane do użytkownika lub partnera.
   responses:
     Error:
-      description: Błąd; kod i czytelny opis w error. W razie 429 odczekaj Retry-After.
+      description: Pole error zawiera kod i opis błędu. Przy odpowiedzi 429 odczekaj liczbę sekund podaną w nagłówku Retry-After.
       content:
         application/json:
           schema:
@@ -3066,8 +3069,9 @@ components:
           minLength: 1
           maxLength: 100
       description:
-        Daty przyszłe, wyjazd po przyjeździe. Liczba guestNames równa guests. voucherReference i hotelComponentId
-        występują razem; dostępne recepcji/adminowi lub partnerowi D.
+        Przyjazd nie może być w przeszłości, a wyjazd musi przypadać później niż przyjazd. Lista guestNames
+        musi zawierać tyle osób, ile podano w guests. Pola voucherReference i hotelComponentId podaje się razem.
+        Voucher może dodać recepcja, administrator lub partner D.
       required:
         - checkIn
         - checkOut
@@ -3106,9 +3110,9 @@ components:
           minItems: 1
           maxItems: 30
       description:
-        Tylko potwierdzony pobyt. W dniu przyjazdu klient/partner nie może edytować; usługi A/B muszą
-        być anulowane/wyjaśnione. Zmiana pobytu z voucherem ponownie weryfikuje nowe daty w D; odmowa lub awaria
-        nie zmienia pobytu.
+        Można zmienić tylko potwierdzoną rezerwację. Od dnia przyjazdu zmiany obsługuje recepcja.
+        Wcześniej trzeba anulować usługi A/B i sprawdzić wynik tych, które czekają na potwierdzenie.
+        Dla pobytu z voucherem D musi potwierdzić nowe daty. Odmowa lub błąd połączenia pozostawiają stare dane.
       required:
         - checkIn
         - checkOut
@@ -3348,8 +3352,8 @@ components:
           format: date-time
           description: ISO 8601 ze strefą czasową, np. 2027-06-15T15:00:00+02:00.
       description:
-        HTTP 201/200 oznacza zapis stanu, a nie automatycznie potwierdzenie u partnera. Zawsze sprawdzaj
-        status.
+        Odpowiedź HTTP 201 lub 200 potwierdza zapis w hotelu. Stan rezerwacji u partnera odczytaj z pola status,
+        które może również oznaczać oczekiwanie na odpowiedź lub nieznany wynik.
       required:
         - id
         - reservationId
@@ -3656,20 +3660,20 @@ components:
           type: string
           maxLength: 2000
           writeOnly: true
-          description: Pomiń, aby zachować. Pusty tekst usuwa sekret. Zamaskowana wartość nie zmienia sekretu.
+          description: Pominięcie pola zachowuje obecny klucz. Pusty tekst go usuwa. Przesłanie zamaskowanej wartości pozostawia klucz bez zmian.
         timeoutMs:
           type: integer
           minimum: 1000
           maximum: 30000
-          description: Łączny limit DNS i HTTP jednej próby, w milisekundach.
+          description: Limit czasu jednej próby w milisekundach. Obejmuje wyszukiwanie DNS i żądanie HTTP.
         authHeader:
           type: string
           enum:
             - X-API-Key
             - Authorization
           description:
-            Przy Authorization sekret może zawierać sam token lub Bearer; wysyłany jest jeden prefiks
-            Bearer.
+            Przy nagłówku Authorization można podać sam token albo token z prefiksem Bearer.
+            Aplikacja dopisze prefiks tylko wtedy, gdy go brakuje.
         demoScenario:
           type: string
           enum:
@@ -3702,7 +3706,7 @@ components:
           maxLength: 1000
         secret:
           type: string
-          description: Puste lub zamaskowane; nigdy rzeczywisty sekret.
+          description: Puste pole lub zamaskowany klucz. Pełnego klucza nie można odczytać.
         timeoutMs:
           type: integer
           minimum: 1000
@@ -3855,7 +3859,7 @@ components:
           properties:
             key:
               type: string
-              description: Pokazany wyłącznie w odpowiedzi utworzenia. Zachowaj bezpiecznie.
+              description: Pełny klucz jest zwracany tylko raz, przy utworzeniu. Zapisz go przed zamknięciem odpowiedzi.
           required:
             - key
     ApiKeyPatch:
@@ -3986,6 +3990,7 @@ components:
             - cancelled
       minProperties: 1
       description:
-        Status ręczny wyłącznie dla HOTEL. A/B aktualizuje się przez potwierdzenie partnera. Aktywna
-        usługa blokuje zmianę przypisanego gościa; anulowany pobyt pozwala tylko dopisać notatkę.
+        Ręcznie można zmienić stan usługi hotelowej (HOTEL). Stan usług A/B pochodzi z odpowiedzi partnera.
+        Przypisanego gościa można zmienić dopiero po anulowaniu aktywnej usługi. W anulowanym pobycie
+        można edytować tylko notatkę.
       additionalProperties: false

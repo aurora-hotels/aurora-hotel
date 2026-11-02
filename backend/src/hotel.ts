@@ -198,7 +198,7 @@ export function reservationView(row: Reservation) {
     updatedAt: row.updatedAt,
   };
 }
-function available(roomId: string, checkIn: string, checkOut: string, excludeId = '') {
+function isRoomAvailable(roomId: string, checkIn: string, checkOut: string, excludeId = '') {
   return !get(
     'SELECT id FROM reservations WHERE roomId=? AND status<>? AND checkIn<? AND checkOut>? AND id<>? LIMIT 1',
     roomId,
@@ -222,7 +222,7 @@ function checkPrice(expected: number, actual: number) {
     expected === actual,
     409,
     'PRICE_CHANGED',
-    'Cena oferty uległa zmianie. Sprawdź aktualną cenę.',
+    'Cena się zmieniła. Sprawdź nową wycenę przed zapisem.',
     { expectedTotalMinor: expected, currentTotalMinor: actual },
   );
 }
@@ -406,7 +406,7 @@ hotelRouter.post('/reservations', requireScope('reservations:create'), async (re
     const price = pricing(room, packageItem, body.checkIn, body.checkOut);
     checkPrice(body.expectedTotalMinor, price.totalMinor);
     assert(
-      available(room.id, body.checkIn, body.checkOut),
+      isRoomAvailable(room.id, body.checkIn, body.checkOut),
       409,
       'ROOM_UNAVAILABLE',
       'Pokój jest już zajęty w wybranym terminie.',
@@ -532,8 +532,8 @@ hotelRouter.patch(
     );
     validateStay(body.checkIn, body.checkOut);
     assertCanChangeDates(initial.id);
-    // D sprawdza nowe daty przed zapisem. Awaria lub brak zgodności nie zmienia pobytu.
-    // Blokada rezerwacji obejmuje całe oczekiwanie HTTP; SQLite nie trzyma wtedy transakcji.
+    // Czekamy na zgodę D pod blokadą rezerwacji, ale poza transakcją SQLite.
+    // Błąd D pozostawi stare daty pobytu.
     const voucherInput = initial.voucherReference
       ? {
           checkIn: body.checkIn,
@@ -578,7 +578,7 @@ hotelRouter.patch(
       const price = pricing(room, packageItem, body.checkIn, body.checkOut);
       checkPrice(body.expectedTotalMinor, price.totalMinor);
       assert(
-        available(room.id, body.checkIn, body.checkOut, row.id),
+        isRoomAvailable(room.id, body.checkIn, body.checkOut, row.id),
         409,
         'ROOM_UNAVAILABLE',
         'Pokój jest zajęty w tym terminie.',
@@ -657,7 +657,7 @@ hotelRouter.post(
       row.status === 'confirmed',
       409,
       'INVALID_STATUS',
-      'Zameldować można tylko potwierdzony pobyt.',
+      'Gości można zameldować tylko przy potwierdzonej rezerwacji.',
     );
     await beforeCheckIn(row);
     const result = transaction(() => {
@@ -692,7 +692,7 @@ hotelRouter.post(
       ['checked_in', 'completed'].includes(row.status),
       409,
       'INVALID_STATUS',
-      'Wymeldować można tylko zameldowany pobyt.',
+      'Najpierw zamelduj gości, żeby zakończyć pobyt.',
     );
     if (row.status === 'checked_in')
       transaction(() => {

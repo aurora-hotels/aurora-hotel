@@ -46,7 +46,7 @@ test('Klient zakłada konto, rezerwuje pokój, zmienia termin i anuluje pobyt', 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).not.toBeVisible();
   await page.getByRole('button', { name: 'Wybierz pokój' }).first().click();
-  await page.getByLabel('Gość 2 — imię i nazwisko').fill('Anna Testowa');
+  await page.getByLabel('Gość 2: imię i nazwisko').fill('Anna Testowa');
   await page.getByLabel('Telefon', { exact: true }).fill('+48123456789');
   await page.getByRole('button', { name: 'Potwierdź rezerwację' }).click();
   await expect(page).toHaveURL(/\/reservations\/[^/]+$/);
@@ -56,7 +56,7 @@ test('Klient zakłada konto, rezerwuje pokój, zmienia termin i anuluje pobyt', 
   await page.getByLabel('Nowy przyjazd').fill(day(64));
   await page.getByLabel('Nowy wyjazd').fill(day(67));
   await page.getByRole('button', { name: 'Potwierdź zmianę i cenę' }).click();
-  await expect(page.getByText('Zmiany pobytu zostały zapisane.')).toBeVisible();
+  await expect(page.getByText('Zapisano zmiany pobytu.')).toBeVisible();
   expect((await (await page.request.get(`/api/v1/reservations/${id}`)).json()).checkIn).toBe(
     day(64),
   );
@@ -96,7 +96,7 @@ test('Recepcja planuje masaż, melduje i wymeldowuje gościa', async ({ page }) 
   await page.getByLabel('Początek usługi').fill(`${day(81)}T10:00`);
   await page.getByLabel('Koniec usługi').fill(`${day(81)}T11:00`);
   await page.getByRole('button', { name: 'Sprawdź dostępność usługi' }).click();
-  await expect(page.getByText('Termin jest dostępny. Możesz wysłać rezerwację.')).toBeVisible();
+  await expect(page.getByText('Termin jest wolny. Możesz zarezerwować usługę.')).toBeVisible();
   await page.getByRole('button', { name: 'Zarezerwuj usługę' }).click();
   await expect(massage.getByText('ID u partnera:')).toBeVisible();
   await page.getByRole('button', { name: 'Zameldowanie', exact: true }).click();
