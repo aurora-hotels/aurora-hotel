@@ -44,6 +44,15 @@ const packageSchema = z
     path: ['items'],
     message: 'Pakiet może zawierać łącznie do 100 usług.',
   });
+function assertRoomNumberFree(number: string, exceptId = '') {
+  assert(
+    !get('SELECT id FROM rooms WHERE number=? AND id<>?', number, exceptId),
+    409,
+    'ROOM_NUMBER_TAKEN',
+    'Pokój o takim numerze już istnieje.',
+    { number: 'Ten numer jest już zajęty.' },
+  );
+}
 adminRouter.get('/admin/rooms', (req, res) => {
   const { page, pageSize, offset } = pageQuery(req.query);
   res.json({
@@ -59,6 +68,7 @@ adminRouter.post('/admin/rooms', (req, res) => {
   const body = roomSchema.parse(req.body);
   const id = randomUUID();
   transaction(() => {
+    assertRoomNumberFree(body.number);
     run(
       'INSERT INTO rooms(id,number,type,description,capacity,nightlyRateMinor,equipment,active) VALUES(?,?,?,?,?,?,?,?)',
       id,
@@ -95,6 +105,7 @@ adminRouter.patch('/admin/rooms/:id', (req, res) => {
       'CAPACITY_IN_USE',
       'Ten pokój ma już rezerwację dla większej liczby gości.',
     );
+    assertRoomNumberFree(body.number, row.id);
     run(
       'UPDATE rooms SET number=?,type=?,description=?,capacity=?,nightlyRateMinor=?,equipment=?,active=? WHERE id=?',
       body.number,
@@ -206,6 +217,12 @@ adminRouter.post('/admin/users', (req, res) => {
     .parse(req.body);
   const id = randomUUID();
   transaction(() => {
+    assert(
+      !get('SELECT id FROM users WHERE email=?', body.email),
+      409,
+      'EMAIL_TAKEN',
+      'Ten adres e-mail jest już zarejestrowany.',
+    );
     run(
       'INSERT INTO users(id,email,passwordHash,name,phone,role,mustChangePassword,createdAt) VALUES(?,?,?,?,?,?,?,?)',
       id,

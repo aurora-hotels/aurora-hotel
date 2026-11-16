@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { config } from '../config.js';
 import { db, get, all, run } from '../db.js';
 import type { Integration, Partner } from './types.js';
 import { IntegrationError } from './types.js';
@@ -10,15 +11,13 @@ export const API_SCOPES = [
   'reservations:update',
   'reservations:cancel',
 ] as const;
+// Klucz z npm run setup (64 znaki szesnastkowe) używamy wprost, żeby odczytać sekrety
+// zapisane wcześniej. Każdą inną wartość dopuszczoną przez config.ts skracamy przez SHA-256.
 function encryptionKey() {
-  const value = process.env.CONFIG_ENCRYPTION_KEY;
-  if (!value || !/^[a-f0-9]{64}$/i.test(value))
-    throw new IntegrationError(
-      503,
-      'CONFIG_KEY_MISSING',
-      'Ustaw CONFIG_ENCRYPTION_KEY jako 64 znaki szesnastkowe.',
-    );
-  return Buffer.from(value, 'hex');
+  const value = config.encryptionKey;
+  return /^[a-f0-9]{64}$/i.test(value)
+    ? Buffer.from(value, 'hex')
+    : createHash('sha256').update(value).digest();
 }
 export function protect(value: string): string {
   const iv = randomBytes(12);

@@ -250,8 +250,10 @@ describe('Zakończony pobyt i zapisane składniki pakietu', () => {
       items: [{ name: 'Masaż pierwotny', partner: 'A', offerId: 'A-MASSAGE', quantity: 2 }],
     });
     expect(pack.status).toBe(201);
-    const date = new Date();
-    date.setUTCDate(date.getUTCDate() + 100);
+    // Pobyt zaczyna się dziś (czas warszawski), bo zameldowanie przed dniem przyjazdu jest odrzucane.
+    const date = new Date(
+      `${new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date())}T00:00:00Z`,
+    );
     const checkIn = date.toISOString().slice(0, 10);
     date.setUTCDate(date.getUTCDate() + 2);
     const checkOut = date.toISOString().slice(0, 10);

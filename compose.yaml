@@ -11,6 +11,9 @@ services:
       APP_ORIGIN: ${DOCKER_APP_ORIGIN:-http://localhost:3001}
     volumes:
       - hotel-data:/app/data
+      # Kopia: docker compose exec hotel npm run backup
+      - hotel-backups:/app/backups
     restart: unless-stopped
 volumes:
   hotel-data:
+  hotel-backups:

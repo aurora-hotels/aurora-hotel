@@ -1,17 +1,20 @@
 import { useState, type FormEvent } from 'react';
 import { Search } from 'lucide-react';
-import { dateLabel, listItems } from '../api';
+import { dateLabel, listItems, warsawInstant } from '../api';
 import { Empty, Field, Loading, Notice, PageTitle, Pagination, useResource } from '../components';
 import type { AuditEvent, Page } from '../types';
 const actionNames: Record<string, string> = {
-  'auth.login': 'Logowanie',
-  'auth.logout': 'Wylogowanie',
+  'user.logged_in': 'Logowanie',
+  'user.profile_updated': 'Zmiana profilu',
+  'user.password_changed': 'Zmiana hasła',
   'user.registered': 'Rejestracja konta',
   'user.created': 'Utworzenie konta',
   'user.updated': 'Zmiana konta',
   'user.password_reset': 'Reset hasła',
   'reservation.created': 'Utworzenie rezerwacji',
   'reservation.updated': 'Zmiana pobytu',
+  'reservation.guests_updated': 'Zmiana danych gości',
+  'reservation-item.update': 'Zmiana usługi pakietu',
   'reservation.cancelled': 'Anulowanie pobytu',
   'reservation.checked_in': 'Zameldowanie',
   'reservation.checked_out': 'Wymeldowanie',
@@ -28,6 +31,7 @@ const actionNames: Record<string, string> = {
   'partner-booking.refresh': 'Odczyt stanu usługi',
   'partner-booking.cancel': 'Anulowanie usługi',
   'voucher.check': 'Weryfikacja vouchera',
+  'demo-voucher.create': 'Dodanie vouchera demo',
   'voucher.completion': 'Potwierdzenie noclegu w D',
 };
 export default function AdminAuditPage() {
@@ -45,7 +49,10 @@ export default function AdminAuditPage() {
       p.set(
         k,
         k === 'from' || k === 'to'
-          ? new Date(String(v) + (k === 'from' ? 'T00:00:00Z' : 'T23:59:59.999Z')).toISOString()
+          ? // Dzień liczymy w czasie warszawskim, tak jak daty pokazane w tabeli.
+            k === 'from'
+            ? warsawInstant(`${v}T00:00`)
+            : new Date(Date.parse(warsawInstant(`${v}T23:59`)) + 59_999).toISOString()
           : String(v),
       );
     }

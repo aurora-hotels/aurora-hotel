@@ -15,6 +15,8 @@ export function createApp() {
   initIntegrations();
   const app = express();
   app.disable('x-powered-by');
+  // Bez tego za reverse proxy wszyscy użytkownicy mieliby jeden adres IP i wspólny limit żądań.
+  if (config.trustProxy) app.set('trust proxy', config.trustProxy);
   app.use((req, res, next) => {
     res.set({
       'X-Content-Type-Options': 'nosniff',

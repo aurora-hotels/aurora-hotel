@@ -10,7 +10,7 @@ import {
   Users,
   Waves,
 } from 'lucide-react';
-import { api, post, errorMessage, money, today, addDays, nights, listItems } from '../api';
+import { api, post, errorMessage, money, today, addDays, nights, listItems, uuid } from '../api';
 import { useAuth, isStaff } from '../auth';
 import {
   Empty,
@@ -40,7 +40,7 @@ export default function RoomsPage() {
   const [chosen, setChosen] = useState<Room | null>(null),
     [booking, setBooking] = useState(false),
     [bookingError, setBookingError] = useState('');
-  const [operation, setOperation] = useState({ key: crypto.randomUUID(), body: '' });
+  const [operation, setOperation] = useState({ key: uuid(), body: '' });
   const [quote, setQuote] = useState({ checkIn: '', checkOut: '', guests: 0, packageId: '' });
   const packages = listItems(packagesResource.data),
     selectedPackage = packages.find((p) => p.id === (chosen ? quote.packageId : packageId));
@@ -101,7 +101,7 @@ export default function RoomsPage() {
       guestNames: Array.from({ length: quote.guests }, (_, i) => String(form.get(`guest-${i}`))),
     };
     const body = JSON.stringify(payload),
-      key = operation.body === body ? operation.key : crypto.randomUUID();
+      key = operation.body === body ? operation.key : uuid();
     setOperation({ body, key });
     try {
       const reservation = await post<Reservation>('/reservations', payload, {

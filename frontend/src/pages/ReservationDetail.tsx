@@ -12,7 +12,18 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import { api, dateLabel, errorMessage, listItems, money, nights, patch, post, today } from '../api';
+import {
+  api,
+  dateLabel,
+  errorMessage,
+  listItems,
+  money,
+  nights,
+  patch,
+  post,
+  today,
+  warsawInstant,
+} from '../api';
 import { isStaff, useAuth } from '../auth';
 import {
   Badge,
@@ -27,30 +38,6 @@ import {
   useResource,
 } from '../components';
 import type { Page, PlanItem, Reservation, Room, StayPackage, StayPlan } from '../types';
-
-// Formularz podaje czas warszawski, niezależnie od strefy ustawionej w przeglądarce.
-function warsawInstant(local: string): string {
-  const target = Date.parse(local + ':00Z');
-  if (!Number.isFinite(target)) throw new Error('Podaj poprawny termin usługi.');
-  let instant = target;
-  for (let i = 0; i < 3; i++) {
-    const parts = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: 'Europe/Warsaw',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    })
-      .format(new Date(instant))
-      .replace(' ', 'T');
-    const adjustment = target - Date.parse(parts + ':00Z');
-    if (adjustment === 0) return new Date(instant).toISOString();
-    instant += adjustment;
-  }
-  throw new Error('Ta godzina nie występuje w Warszawie przy zmianie czasu. Wybierz inną.');
-}
 
 export default function ReservationDetailPage() {
   const { id } = useParams();
@@ -176,11 +163,16 @@ export default function ReservationDetailPage() {
               {reservation.status === 'confirmed' && (
                 <button
                   className="button primary"
-                  disabled={busy}
+                  disabled={busy || reservation.checkIn > today()}
                   onClick={() => action('/check-in', 'Goście zostali zameldowani.')}
                 >
                   <Check size={17} /> Zameldowanie
                 </button>
+              )}
+              {reservation.status === 'confirmed' && reservation.checkIn > today() && (
+                <p className="muted small">
+                  Zameldowanie będzie możliwe od dnia przyjazdu ({dateLabel(reservation.checkIn)}).
+                </p>
               )}
               {reservation.status === 'checked_in' && (
                 <button
@@ -474,7 +466,8 @@ function EditStay({
     [error, setError] = useState('');
   const rooms = useResource<Page<Room>>('/rooms?pageSize=100'),
     packages = useResource<Page<StayPackage>>('/packages?pageSize=100');
-  const room = listItems(rooms.data).find((x) => x.id === r.roomId),
+  // Pokój wycofany z oferty nie występuje na liście, ale pobyt nadal można w nim przesunąć.
+  const room = listItems(rooms.data).find((x) => x.id === r.roomId) ?? r.room,
     pkg = listItems(packages.data).find((x) => x.id === r.packageId);
   const total =
     nights(checkIn, checkOut) * (room?.nightlyRateMinor ?? r.pricing.nightlyRateMinor) +

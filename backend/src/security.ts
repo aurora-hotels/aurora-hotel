@@ -61,6 +61,12 @@ export function verifyPassword(password: string, hash: string) {
   const expected = Buffer.from(value, 'hex');
   return expected.length === result.length && timingSafeEqual(expected, result);
 }
+// Nieistniejące konto też liczy scrypt, żeby czas odpowiedzi nie zdradzał, czy adres jest w bazie.
+let dummyHash: string | undefined;
+export function verifyDummyPassword(password: string) {
+  dummyHash ??= hashPassword(randomBytes(16).toString('hex'));
+  verifyPassword(password, dummyHash);
+}
 export function safeUser(user: UserRow) {
   return {
     id: user.id,
@@ -215,6 +221,15 @@ export function audit(
     entityId,
     JSON.stringify(details),
     now(),
+  );
+}
+// Wygasłe sesje i stare klucze idempotencji nie są już potrzebne, a bez sprzątania baza rośnie.
+const IDEMPOTENCY_DAYS = 7;
+export function purgeExpired() {
+  run('DELETE FROM sessions WHERE expiresAt<=?', now());
+  run(
+    'DELETE FROM idempotency_records WHERE createdAt<?',
+    new Date(Date.now() - IDEMPOTENCY_DAYS * 86400000).toISOString(),
   );
 }
 export function rateLimit(limit: number, windowMs = 60000): RequestHandler {

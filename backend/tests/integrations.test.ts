@@ -21,8 +21,11 @@ process.env.PUBLIC_RATE_LIMIT = '10000';
 let app: any;
 let admin: any;
 let database: typeof import('../src/db.js');
+// Daty liczymy jak serwer, w strefie Europe/Warsaw; inaczej testy psułyby się tuż po północy.
+const warsawToday = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date());
 const day = (offset: number) => {
-  const d = new Date();
+  const d = new Date(`${warsawToday()}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0, 10);
 };
@@ -81,8 +84,8 @@ async function fixture(voucher = false) {
   const body = {
     roomId: room.body.id,
     packageId: pack.body.id,
-    checkIn: day(20),
-    checkOut: day(23),
+    checkIn: day(0),
+    checkOut: day(3),
     guests: 2,
     expectedTotalMinor: 70000,
     guest: { name: 'Jan Integracyjny', email: 'jan@example.test', phone: '+48123456789' },
@@ -103,8 +106,8 @@ async function service(f: any, partner: 'A' | 'B', changes: Record<string, unkno
   return write('post', `/reservations/${f.reservation.id}/partner-bookings`, {
     itemId: item.id,
     guestIndex: 0,
-    startsAt: time(21, partner === 'A' ? 10 : 13),
-    endsAt: time(21, partner === 'A' ? 11 : 14),
+    startsAt: time(1, partner === 'A' ? 10 : 13),
+    endsAt: time(1, partner === 'A' ? 11 : 14),
     ...changes,
   });
 }
@@ -154,10 +157,10 @@ afterAll(() => {
 describe('Plan pobytu i usługi projektów A/B', () => {
   it('T-20: odrzuca termin poza pobytem i usługi nakładające się dla gościa', async () => {
     const f = await fixture();
-    const outside = await service(f, 'A', { startsAt: time(19, 10), endsAt: time(19, 11) });
+    const outside = await service(f, 'A', { startsAt: time(-1, 10), endsAt: time(-1, 11) });
     expect([400, 409]).toContain(outside.status);
     expect((await service(f, 'A')).status).toBe(201);
-    const overlap = await service(f, 'B', { startsAt: time(21, 10), endsAt: time(21, 11) });
+    const overlap = await service(f, 'B', { startsAt: time(1, 10), endsAt: time(1, 11) });
     expect(overlap.status, JSON.stringify(overlap.body)).toBe(409);
     expect(
       database.get<any>(
@@ -234,9 +237,7 @@ describe('Plan pobytu i usługi projektów A/B', () => {
       expectedTotalMinor: 70000,
     });
     expect(response.status).toBe(409);
-    expect((await admin.get(`/api/v1/reservations/${f.reservation.id}`)).body.checkIn).toBe(
-      day(20),
-    );
+    expect((await admin.get(`/api/v1/reservations/${f.reservation.id}`)).body.checkIn).toBe(day(0));
   });
   it('T-23: częściowe anulowanie zachowuje hotel, dopóki drugi partner nie potwierdzi', async () => {
     const f = await fixture();
@@ -295,8 +296,8 @@ describe('Voucher usługowy D i wykonanie części hotelowej', () => {
     };
     const unchanged = async () => {
       const current = (await admin.get(`/api/v1/reservations/${f.reservation.id}`)).body;
-      expect(current.checkIn).toBe(day(20));
-      expect(current.checkOut).toBe(day(23));
+      expect(current.checkIn).toBe(day(0));
+      expect(current.checkOut).toBe(day(3));
       expect(current.version).toBe(1);
       expect(current.pricing.totalMinor).toBe(70000);
     };
@@ -726,5 +727,26 @@ describe('Kontrakt A przez prawdziwe HTTP i trwające operacje', () => {
         expect((await bookings(f.reservation.id)).all[0].status).toBe('completed');
       },
     );
+  });
+});
+
+describe('Lista gości a usługi partnerów', () => {
+  it('Kontakt i wolnego gościa można poprawić; nazwisko gościa z usługą A/B jest chronione', async () => {
+    const f = await fixture();
+    expect((await service(f, 'A')).status).toBe(201);
+    const url = `/reservations/${f.reservation.id}/guests`;
+    const contact = await write('patch', url, {
+      expectedVersion: 1,
+      guestNames: ['Jan Integracyjny', 'Anna Poprawiona'],
+      guest: { name: 'Jan Integracyjny', email: 'nowy@example.test', phone: '+48111222333' },
+    });
+    expect(contact.status, JSON.stringify(contact.body)).toBe(200);
+    expect(contact.body.guest.email).toBe('nowy@example.test');
+    const blocked = await write('patch', url, {
+      expectedVersion: 2,
+      guestNames: ['Jan Zmieniony', 'Anna Poprawiona'],
+    });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.code).toBe('ACTIVE_PARTNER_SERVICES');
   });
 });

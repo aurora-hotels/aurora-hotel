@@ -10,6 +10,7 @@ import {
   destroySession,
   hashPassword,
   verifyPassword,
+  verifyDummyPassword,
   safeUser,
   requireAuth,
   rateLimit,
@@ -70,6 +71,7 @@ authRouter.post('/auth/login', rateLimit(config.loginLimit), (req, res) => {
     .strict()
     .parse(req.body);
   const user = get<UserRow>('SELECT * FROM users WHERE email=?', body.email);
+  if (!user) verifyDummyPassword(body.password);
   // Ta sama odpowiedź dla złego hasła i zablokowanego konta.
   assert(
     user && verifyPassword(body.password, user.passwordHash) && user.active,
@@ -97,19 +99,45 @@ authRouter.patch('/me', requireAuth, (req, res) => {
       name: nameSchema.optional(),
       phone: phoneSchema.optional(),
       email: emailSchema.optional(),
+      currentPassword: z.string().min(1).max(128).optional(),
     })
     .strict()
-    .refine((x) => Object.keys(x).length > 0)
+    .refine((x) => x.name !== undefined || x.phone !== undefined || x.email !== undefined)
     .parse(req.body);
   const user = req.currentUser;
-  run(
-    'UPDATE users SET name=?,phone=?,email=? WHERE id=?',
-    body.name ?? user.name,
-    body.phone ?? user.phone,
-    body.email ?? user.email,
-    user.id,
-  );
-  audit(req.actor!, 'user.profile_updated', user.id);
+  const emailChanged = body.email !== undefined && body.email !== user.email;
+  // E-mail jest loginem, więc jego zmianę potwierdzamy hasłem jak zmianę hasła.
+  if (emailChanged) {
+    assert(
+      body.currentPassword,
+      400,
+      'PASSWORD_REQUIRED',
+      'Podaj obecne hasło, żeby zmienić adres e-mail.',
+      { currentPassword: 'Wymagane przy zmianie adresu e-mail.' },
+    );
+    assert(
+      verifyPassword(body.currentPassword, user.passwordHash),
+      400,
+      'PASSWORD_INVALID',
+      'Obecne hasło jest niepoprawne.',
+    );
+  }
+  transaction(() => {
+    assert(
+      !emailChanged || !get('SELECT id FROM users WHERE email=? AND id<>?', body.email!, user.id),
+      409,
+      'EMAIL_TAKEN',
+      'Ten adres e-mail jest już zarejestrowany.',
+    );
+    run(
+      'UPDATE users SET name=?,phone=?,email=? WHERE id=?',
+      body.name ?? user.name,
+      body.phone ?? user.phone,
+      body.email ?? user.email,
+      user.id,
+    );
+    audit(req.actor!, 'user.profile_updated', user.id, { emailChanged });
+  });
   res.json(safeUser(get<UserRow>('SELECT * FROM users WHERE id=?', user.id)!));
 });
 authRouter.post(['/me/change-password', '/auth/change-password'], requireAuth, (req, res) => {

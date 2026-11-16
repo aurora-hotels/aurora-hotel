@@ -8,7 +8,9 @@ export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const [busy, setBusy] = useState(''),
     [error, setError] = useState(''),
-    [success, setSuccess] = useState('');
+    [success, setSuccess] = useState(''),
+    [email, setEmail] = useState(user?.email ?? '');
+  const emailChanged = email.trim().toLowerCase() !== (user?.email ?? '');
   async function save(event: FormEvent<HTMLFormElement>, password = false) {
     event.preventDefault();
     const element = event.currentTarget,
@@ -30,6 +32,7 @@ export default function ProfilePage() {
           name: String(form.get('name')),
           phone: String(form.get('phone')),
           email: String(form.get('email')),
+          ...(emailChanged ? { currentPassword: String(form.get('confirmPassword')) } : {}),
         });
       await refreshUser();
       setSuccess(
@@ -65,11 +68,26 @@ export default function ProfilePage() {
               <input
                 name="email"
                 type="email"
-                defaultValue={user?.email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 maxLength={254}
               />
             </Field>
+            {emailChanged && (
+              <Field
+                label="Obecne hasło (potwierdzenie)"
+                hint="Wymagane przy zmianie adresu e-mail."
+              >
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  maxLength={128}
+                />
+              </Field>
+            )}
             <Field label="Telefon">
               <input name="phone" type="tel" defaultValue={user?.phone ?? ''} maxLength={30} />
             </Field>

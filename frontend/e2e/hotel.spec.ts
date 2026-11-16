@@ -1,8 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
+// Daty liczymy jak serwer, w strefie Europe/Warsaw; inaczej testy psułyby się tuż po północy.
+const warsawToday = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date());
 const day = (offset: number) => {
-  const d = new Date();
+  const d = new Date(`${warsawToday()}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0, 10);
 };
@@ -77,8 +80,8 @@ test('Recepcja planuje masaż, melduje i wymeldowuje gościa', async ({ page }) 
     {
       roomId: 'room-202',
       packageId: 'package-active',
-      checkIn: day(80),
-      checkOut: day(83),
+      checkIn: day(0),
+      checkOut: day(3),
       guests: 1,
       expectedTotalMinor: 122000,
       guest: { name: 'Gość Recepcji', email: 'guest@e2e.test', phone: '' },
@@ -93,8 +96,8 @@ test('Recepcja planuje masaż, melduje i wymeldowuje gościa', async ({ page }) 
     .locator('article')
     .filter({ has: page.getByRole('heading', { name: 'Masaż relaksacyjny', exact: true }) });
   await massage.getByRole('button', { name: 'Zaplanuj termin' }).click();
-  await page.getByLabel('Początek usługi').fill(`${day(81)}T10:00`);
-  await page.getByLabel('Koniec usługi').fill(`${day(81)}T11:00`);
+  await page.getByLabel('Początek usługi').fill(`${day(1)}T10:00`);
+  await page.getByLabel('Koniec usługi').fill(`${day(1)}T11:00`);
   await page.getByRole('button', { name: 'Sprawdź dostępność usługi' }).click();
   await expect(page.getByText('Termin jest wolny. Możesz zarezerwować usługę.')).toBeVisible();
   await page.getByRole('button', { name: 'Zarezerwuj usługę' }).click();
@@ -221,8 +224,8 @@ test('Voucher demo przechodzi przez formularze do potwierdzenia hotelu w D', asy
   await page.getByRole('button', { name: 'Dodaj voucher demo', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
   await page.goto('/rooms');
-  await page.getByLabel('Przyjazd', { exact: true }).fill(day(90));
-  await page.getByLabel('Wyjazd', { exact: true }).fill(day(93));
+  await page.getByLabel('Przyjazd', { exact: true }).fill(day(0));
+  await page.getByLabel('Wyjazd', { exact: true }).fill(day(3));
   await page.getByLabel('Liczba gości', { exact: true }).fill('1');
   await page.getByRole('button', { name: 'Sprawdź dostępność', exact: true }).click();
   await page.getByRole('button', { name: 'Wybierz pokój' }).first().click();

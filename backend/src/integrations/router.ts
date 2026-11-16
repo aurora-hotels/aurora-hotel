@@ -291,11 +291,13 @@ integrationRouter.post('/reservations/:id/voucher/check', staff, async (req, res
   res.json(result);
 });
 integrationRouter.post('/reservations/:id/voucher/confirm-completion', staff, async (req, res) => {
-  const reservationId = id(req.params.id),
-    row = reservationRow(reservationId);
-  if (!row.voucherReference)
+  const reservationId = id(req.params.id);
+  if (!reservationRow(reservationId).voucherReference)
     throw new IntegrationError(400, 'NO_VOUCHER', 'Ta rezerwacja nie ma vouchera.');
-  const result = await withReservationLock(reservationId, () => afterCheckOut(row));
+  // Stan pobytu czytamy dopiero pod blokadą, żeby nie użyć danych sprzed równoległej operacji.
+  const result = await withReservationLock(reservationId, () =>
+    afterCheckOut(reservationRow(reservationId)),
+  );
   audit(req.actor!, 'voucher.completion', reservationId, { status: result?.status });
   res.json(result);
 });

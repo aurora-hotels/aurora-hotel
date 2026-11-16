@@ -35,6 +35,8 @@ export const config = {
   maxStayNights: number('MAX_STAY_NIGHTS', 90, 1, 365),
   loginLimit: number('LOGIN_RATE_LIMIT', 15, 1, 1000),
   publicLimit: number('PUBLIC_RATE_LIMIT', 300, 1, 10000),
+  // Liczba zaufanych serwerów proxy przed aplikacją; 0 oznacza połączenie bezpośrednie.
+  trustProxy: number('TRUST_PROXY', 0, 0, 10),
   allowedPartnerHosts: (process.env.ALLOWED_PARTNER_HOSTS || '')
     .split(',')
     .map((x) => x.trim())

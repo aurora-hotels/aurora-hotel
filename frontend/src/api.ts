@@ -85,6 +85,39 @@ export function addDays(date: string, days: number) {
 }
 export const nights = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+// crypto.randomUUID działa tylko przez HTTPS i na localhost. Pod adresem IP w sieci lokalnej
+// składamy identyfikator z getRandomValues, które jest dostępne zawsze.
+export function uuid(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = [...bytes].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 export function listItems<T>(value: { items: T[] } | T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : (value?.items ?? []);
+}
+// Formularz podaje czas warszawski, niezależnie od strefy ustawionej w przeglądarce.
+export function warsawInstant(local: string): string {
+  const target = Date.parse(local + ':00Z');
+  if (!Number.isFinite(target)) throw new Error('Podaj poprawną datę i godzinę.');
+  let instant = target;
+  for (let i = 0; i < 3; i++) {
+    const parts = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Warsaw',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .format(new Date(instant))
+      .replace(' ', 'T');
+    const adjustment = target - Date.parse(parts + ':00Z');
+    if (adjustment === 0) return new Date(instant).toISOString();
+    instant += adjustment;
+  }
+  throw new Error('Ta godzina nie występuje w Warszawie przy zmianie czasu. Wybierz inną.');
 }
