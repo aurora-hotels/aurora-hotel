@@ -35,4 +35,14 @@ W Dockerze: po `npm run setup` uruchom `docker compose up --build`. Aplikacja dz
 
 Lokalny tryb demo pozwala sprawdzić scenariusz bez pozostałych aplikacji. Wspólna próba z rzeczywistymi A/B/D jest jeszcze do wykonania. Projekt używa danych testowych i nie obsługuje płatności.
 
-[Dokumentacja zespołu](https://zielinskiadis.atlassian.net/wiki/spaces/KAN) · [Jira](https://zielinskiadis.atlassian.net/jira/software/projects/KAN/list) · [OpenAPI](docs/openapi.yaml)
+## Dokumentacja
+
+Cała dokumentacja zespołu jest w katalogu [`docs/`](docs/README.md):
+
+- [cel i zakres](docs/cel-i-zakres.md), [wymagania](docs/wymagania.md), [plan prac](docs/plan-prac.md);
+- [zespół i zasady współpracy](docs/zespol.md), [spotkania i decyzje](docs/spotkania/README.md);
+- [budowa aplikacji](docs/budowa-aplikacji.md), [konfiguracja i uruchomienie](docs/konfiguracja.md);
+- [API hotelu dla innych grup](docs/api/README.md), [projekt endpointów i uprawnień](docs/api/projekt-endpointow.md), [kontrakty A/B/D](docs/api/integracje.md), [OpenAPI](docs/openapi.yaml);
+- [testy i odbiór](docs/testy-i-odbior.md), [scenariusz pokazu](docs/demo.md), [materiały](docs/materialy/README.md).
+
+Zadania prowadzimy w [Jirze](https://zielinskiadis.atlassian.net/jira/software/projects/KAN/list).

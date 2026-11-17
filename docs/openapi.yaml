@@ -607,13 +607,20 @@ paths:
               - checked_in
               - completed
               - cancelled
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Tylko pobyty obejmujące wskazany dzień, od dnia przyjazdu do dnia wyjazdu włącznie.
         - name: search
           in: query
           required: false
           schema:
             type: string
             maxLength: 100
-      description: Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie. Pole search szuka po numerze rezerwacji lub danych gościa.
+      description: Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie. Pole search szuka po numerze rezerwacji lub imieniu i nazwisku osoby kontaktowej.
       x-required-scope: reservations:read
   /reservations/{id}:
     get:
