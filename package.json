@@ -20,6 +20,8 @@
     "test:e2e": "playwright test",
     "check": "npm run format:check && npm test && npm run build",
     "backup": "node --env-file-if-exists=.env scripts/backup.mjs",
+    "service-token": "node --env-file-if-exists=.env --import tsx backend/src/service-tokens.ts",
+    "jobs": "node --env-file-if-exists=.env scripts/internal-jobs.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

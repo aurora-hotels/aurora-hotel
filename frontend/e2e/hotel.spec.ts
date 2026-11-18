@@ -243,3 +243,34 @@ test('Voucher demo przechodzi przez formularze do potwierdzenia hotelu w D', asy
   await expect(page.locator('.page-title').getByText('Zakończona', { exact: true })).toBeVisible();
   expect(await page.locator('body').textContent()).not.toContain(reference);
 });
+
+test('Bez projektu D formularz rezerwacji nie pokazuje vouchera, a rezerwacja działa', async ({
+  page,
+}) => {
+  await login(page, 'admin@e2e.test', 'E2e-admin-password-2026');
+  const toggle = async (enabled: boolean) => {
+    const csrf = await (await page.request.get('/api/v1/auth/csrf')).json();
+    const result = await page.request.patch('/api/v1/admin/integrations/D', {
+      data: { enabled },
+      headers: { 'X-CSRF-Token': csrf.csrfToken },
+    });
+    expect(result.status(), await result.text()).toBe(200);
+  };
+  await toggle(false);
+  try {
+    await page.goto('/rooms');
+    await page.getByLabel('Przyjazd', { exact: true }).fill(day(5));
+    await page.getByLabel('Wyjazd', { exact: true }).fill(day(6));
+    await page.getByLabel('Liczba gości', { exact: true }).fill('1');
+    await page.getByRole('button', { name: 'Sprawdź dostępność', exact: true }).click();
+    await page.getByRole('button', { name: 'Wybierz pokój' }).first().click();
+    await expect(page.getByRole('button', { name: 'Potwierdź rezerwację' })).toBeVisible();
+    await expect(page.getByText('Powiąż voucher partnera D (opcjonalnie)')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Potwierdź rezerwację' }).click();
+    await expect(
+      page.getByText('Rezerwacja bez vouchera. Aplikacja nie pobiera płatności.'),
+    ).toBeVisible();
+  } finally {
+    await toggle(true);
+  }
+});

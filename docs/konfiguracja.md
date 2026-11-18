@@ -37,7 +37,7 @@ Dane startowe: pokoje 101 i 102 (240 zł za noc), 201 (380 zł), 202 (320 zł), 
 | `ALLOWED_PARTNER_HOSTS`       | Dozwolone nazwy hostów rzeczywistych API partnerów, oddzielone przecinkami | Puste, dopóki nie uzgodnimy adresów                      |
 | `ALLOW_PRIVATE_PARTNER_HOSTS` | Hosty w sieci lokalnej dopuszczone jawnie; muszą być też w liście powyżej  | Puste                                                    |
 | `DOCKER_APP_ORIGIN`           | Adres interfejsu w Docker Compose                                          | `http://localhost:3001`                                  |
-| `BACKUP_DIR`                  | Katalog kopii bazy                                                         | `backups`; w obrazie Dockera `/app/backups`              |
+| `BACKUP_DIR`                  | Katalog kopii bazy (polecenie `backup` i operacja W-05)                    | `backups`; w obrazie Dockera `/app/backups`              |
 
 Błędna wartość liczbowa albo sekret krótszy niż 32 znaki w trybie produkcyjnym zatrzymują start serwera z czytelnym komunikatem.
 
@@ -67,19 +67,21 @@ Tryb i adres API są zapamiętywane przy każdej operacji A/B oraz przy zgłosze
 
 ## Polecenia
 
-| Polecenie                                 | Kiedy użyć                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------ |
-| `npm run setup`                           | Pierwsze przygotowanie projektu                                          |
-| `npm run dev`                             | Praca nad kodem; Vite i serwer z automatycznym restartem                 |
-| `npm run seed`                            | Uzupełnienie danych startowych bez kasowania rezerwacji                  |
-| `npm run format` / `npm run format:check` | Ujednolicenie formatowania / sprawdzenie formatowania                    |
-| `npm run typecheck`                       | Sprawdzenie typów TypeScript                                             |
-| `npm test`                                | Automatyczne testy reguł i API                                           |
-| `npm run test:e2e`                        | Scenariusze w przeglądarce (wcześniej `npx playwright install chromium`) |
-| `npm run build`                           | Kontrola typów oraz zbudowanie interfejsu i serwera                      |
-| `npm run check`                           | Formatowanie, testy serwera i build jedną komendą                        |
-| `npm start`                               | Uruchomienie zbudowanej aplikacji pod adresem serwera                    |
-| `npm run backup`                          | Spójna kopia bazy SQLite                                                 |
+| Polecenie                                  | Kiedy użyć                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| `npm run setup`                            | Pierwsze przygotowanie projektu                                          |
+| `npm run dev`                              | Praca nad kodem; Vite i serwer z automatycznym restartem                 |
+| `npm run seed`                             | Uzupełnienie danych startowych bez kasowania rezerwacji                  |
+| `npm run format` / `npm run format:check`  | Ujednolicenie formatowania / sprawdzenie formatowania                    |
+| `npm run typecheck`                        | Sprawdzenie typów TypeScript                                             |
+| `npm test`                                 | Automatyczne testy reguł i API                                           |
+| `npm run test:e2e`                         | Scenariusze w przeglądarce (wcześniej `npx playwright install chromium`) |
+| `npm run build`                            | Kontrola typów oraz zbudowanie interfejsu i serwera                      |
+| `npm run check`                            | Formatowanie, testy serwera i build jedną komendą                        |
+| `npm start`                                | Uruchomienie zbudowanej aplikacji pod adresem serwera                    |
+| `npm run backup`                           | Spójna kopia bazy SQLite                                                 |
+| `npm run service-token -- create <usługa>` | Token usługi wewnętrznej: `monitoring`, `scheduler` albo `backup`        |
+| `npm run jobs -- <zadanie>`                | Zadanie usługi wewnętrznej: `ready`, `reconcile`, `cleanup`, `backup`    |
 
 ## Zbudowana aplikacja pod jednym adresem
 
@@ -105,7 +107,7 @@ Otwórz `http://localhost:3001`. Compose ustawia adres interfejsu z `DOCKER_APP_
 
 Zatrzymanie: `docker compose down`. Nie dodawaj `-v`, jeśli chcesz zachować rezerwacje. Nie uruchamiaj równocześnie lokalnego serwera na porcie 3001.
 
-Konfigurację Dockera sprawdziliśmy przez przegląd plików. Kontener nie był jeszcze uruchamiany, bo środowiska, w których testowaliśmy, nie miały silnika Docker.
+Obraz zbudowaliśmy i uruchomiliśmy 19 listopada 2026 (Docker 29, Compose 5): kontener przechodzi kontrolę stanu, serwuje interfejs i API pod jednym adresem, a dane i kopie zostają w wolumenach po restarcie.
 
 ## Kopie bazy
 
@@ -116,9 +118,32 @@ docker compose exec hotel npm run backup    # w kontenerze, kopia trafia do wolu
 
 Skrypt korzysta z mechanizmu kopii SQLite. Zwykłe kopiowanie otwartego pliku mogłoby pominąć dane z dziennika WAL. Przed odtworzeniem zatrzymaj serwer, zachowaj dotychczasowy plik i przywróć kopię razem z tym samym `CONFIG_ENCRYPTION_KEY`.
 
+Kopię może też zlecić usługa kopii zapasowych przez API wewnętrzne (W-05), bez dostępu do powłoki serwera. Opis w następnym punkcie.
+
+## Usługi wewnętrzne
+
+Monitoring, harmonogram i kopia zapasowa korzystają z API `/internal/v1` ([kontrakt](openapi-internal.yaml), [karty W-01–W-05](api/karty-endpointow.md#wewnętrzne-wymagające-tokenu)). Każda usługa dostaje własny token:
+
+```bash
+npm run service-token -- create monitoring "Monitoring"   # wartość tokenu jest pokazana tylko raz
+npm run service-token -- list                             # lista bez wartości tokenów
+npm run service-token -- revoke <id>                      # wyłączenie tokenu
+```
+
+Zadania uruchamia się poleceniem `npm run jobs -- <zadanie>` z tokenem w zmiennej środowiska:
+
+| Zadanie     | Token              | Co robi                                                           |
+| ----------- | ------------------ | ----------------------------------------------------------------- |
+| `ready`     | `MONITORING_TOKEN` | Sprawdza bazę i połączenia; kod wyjścia 1, gdy stan nie jest `ok` |
+| `reconcile` | `SCHEDULER_TOKEN`  | Pyta partnerów o wynik wszystkich niepewnych operacji A/B/D       |
+| `cleanup`   | `SCHEDULER_TOKEN`  | Usuwa wygasłe sesje i stare klucze ponowienia                     |
+| `backup`    | `BACKUP_TOKEN`     | Tworzy kopię bazy w `BACKUP_DIR` serwera                          |
+
+Adres serwera ustawia `INTERNAL_URL` (domyślnie `http://127.0.0.1:3001`). Przykład harmonogramu w cronie i w Dockerze jest w [instrukcji wdrożenia](wdrozenie-vps.md#zadania-harmonogramu). Tokenów nie zapisujemy w repozytorium ani w historii operacji.
+
 ## Wdrożenie publiczne
 
-Projekt jest przygotowany do pokazu lokalnego. Dla wdrożenia publicznego potrzebne są: `NODE_ENV=production`, adres HTTPS w `APP_ORIGIN`, `COOKIE_SECURE=true`, własne sekrety o długości co najmniej 32 znaków, trwały katalog bazy i poprawne `TRUST_PROXY`. Baza jest przeznaczona dla jednej instancji serwera: nie uruchamiamy kilku kopii kontenera.
+Instrukcja krok po kroku dla serwera VPS (Docker, HTTPS, zapora, zadania harmonogramu, kopie, aktualizacje i udostępnienie API innym grupom) jest na stronie [Wdrożenie na VPS](wdrozenie-vps.md). W skrócie: `NODE_ENV=production`, adres HTTPS w `APP_ORIGIN`, `COOKIE_SECURE=true`, własne sekrety o długości co najmniej 32 znaków, trwały katalog bazy i `TRUST_PROXY=1` za jednym serwerem pośredniczącym. Baza jest przeznaczona dla jednej instancji serwera: nie uruchamiamy kilku kopii kontenera.
 
 ## Typowe problemy
 
@@ -127,5 +152,6 @@ Projekt jest przygotowany do pokazu lokalnego. Dla wdrożenia publicznego potrze
 - **Brak logowania po zmianie `ADMIN_PASSWORD`:** ta wartość służy tylko do utworzenia pierwszego administratora. Istniejącemu kontu hasło zmienia się w profilu albo przez reset.
 - **Aplikacja otwierana z innego komputera w sieci lokalnej:** uruchom zbudowaną wersję (`npm start`) z `HOST=0.0.0.0`, a w `APP_ORIGIN` wpisz dokładnie ten adres, pod którym otwierasz stronę.
 - **Partner nie odpowiada:** sprawdź tryb `real`, adres, dopuszczony host, klucz i wynik testu połączenia. Przekroczenie czasu nie oznacza, że żądanie nie dotarło.
-- **Niepewna operacja:** otwórz plan pobytu i odśwież wynik. Nie twórz drugiego zamówienia.
+- **Niepewna operacja:** otwórz plan pobytu i odśwież wynik albo uruchom `npm run jobs -- reconcile`. Nie twórz drugiego zamówienia.
+- **Nie da się wyłączyć połączenia (`PARTNER_IN_USE`):** najpierw zakończ albo anuluj pobyty, które z niego korzystają, i wyjaśnij niepewne operacje.
 - **Zmienione środowisko partnera:** przywróć tryb i adres, pod który trafiła dana operacja; nowe środowisko nie zna jej historii.

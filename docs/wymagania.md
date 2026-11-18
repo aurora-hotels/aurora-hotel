@@ -97,4 +97,4 @@ Odbiorcą projektu jest prowadzący przedmiot, a potrzeby użytkownika reprezent
 
 ## Stan weryfikacji
 
-Testy lokalne używają trybu demo oraz serwerów HTTP uruchamianych w testach. Wspólny scenariusz na aplikacjach A, B i D pozostaje do wykonania po uzgodnieniu adresów, kluczy i identyfikatorów ofert. Ręczny odbiór przez członków zespołu nie jest jeszcze kompletny.
+Testy lokalne używają trybu demo oraz serwerów HTTP uruchamianych w testach; każda próba z [testów ręcznych](testy-manualne.md) ma odpowiadający jej test automatyczny. Wspólny scenariusz na aplikacjach A i B pozostaje do wykonania po uzgodnieniu adresów, kluczy i identyfikatorów ofert. Projektu D w grupie nie ma, więc vouchery sprawdzamy w trybie demo.

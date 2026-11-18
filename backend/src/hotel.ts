@@ -281,6 +281,17 @@ hotelRouter.get('/packages', (req, res) => {
     pageSize: page.pageSize,
   });
 });
+// Które połączenia z innymi projektami są włączone. Pozwala ukryć w aplikacji np. vouchery,
+// gdy grupa D nie działa. Same ustawienia połączeń widzi tylko administrator.
+hotelRouter.get('/features', (req, res) => {
+  catalogScope(req);
+  const enabled = (partner: string) =>
+    Boolean(
+      get<{ enabled: number }>('SELECT enabled FROM integrations WHERE partner=?', partner)
+        ?.enabled,
+    );
+  res.json({ massages: enabled('A'), trainings: enabled('B'), vouchers: enabled('D') });
+});
 hotelRouter.get('/availability', (req, res) => {
   catalogScope(req);
   const query = z

@@ -7,8 +7,9 @@ info:
     API do rezerwacji pokoi, obsługi pobytu i połączeń z projektami A, B i D. Ceny podajemy w groszach PLN,
     jako liczby całkowite. Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie.
     Przy zapisie przez sesję wymagamy tokenu CSRF. Partner podaje klucz API bez cookie sesji.
-    Żądania z nieznanymi polami są odrzucane. Ustalenia dotyczące API innych grup są w Confluence
-    (https://zielinskiadis.atlassian.net/wiki/spaces/KAN). Format tych połączeń wymaga jeszcze wspólnego uzgodnienia.
+    Żądania z nieznanymi polami są odrzucane. Kontrakty z innymi grupami opisuje docs/api/integracje.md
+    w repozytorium https://github.com/aurora-hotels/aurora-hotel. API usług wewnętrznych (/internal/v1) opisuje
+    osobny plik docs/openapi-internal.yaml.
 servers:
   - url: http://localhost:3001/api/v1
     description: Adres lokalny. Adres do połączenia z innymi grupami ustalamy przed wspólnym testem.
@@ -389,6 +390,34 @@ paths:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
       description: Lista jest publiczna. Jeśli podajesz klucz API, musi być poprawny i mieć uprawnienie catalog:read.
+  /features:
+    get:
+      summary: Pokaż włączone połączenia z innymi projektami
+      operationId: getFeatures
+      tags:
+        - Oferta
+      security:
+        - {}
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      description:
+        Informuje, czy działają masaże (A), treningi (B) i vouchery (D). Aplikacja ukrywa vouchery, gdy połączenie
+        z D jest wyłączone. Jeśli podajesz klucz API, musi być poprawny i mieć uprawnienie catalog:read.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Features'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
   /availability:
     get:
       summary: Sprawdź wolne pokoje i cenę
@@ -2946,6 +2975,23 @@ components:
         - name
         - priceMinor
       additionalProperties: false
+    Features:
+      type: object
+      properties:
+        massages:
+          type: boolean
+          description: Połączenie z projektem A (masaże) jest włączone.
+        trainings:
+          type: boolean
+          description: Połączenie z projektem B (treningi) jest włączone.
+        vouchers:
+          type: boolean
+          description: Połączenie z projektem D (vouchery) jest włączone.
+      required:
+        - massages
+        - trainings
+        - vouchers
+      additionalProperties: false
     Package:
       type: object
       properties:
@@ -4005,6 +4051,7 @@ components:
           enum:
             - user
             - partner
+            - service
         actorId:
           type: string
           minLength: 1

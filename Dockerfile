@@ -13,7 +13,7 @@ RUN npm ci --omit=dev && mkdir -p data backups && chown node:node data backups
 COPY --from=build /app/backend/dist ./backend/dist
 COPY --from=build /app/frontend/dist ./frontend/dist
 COPY --from=build /app/docs ./docs
-COPY scripts/backup.mjs ./scripts/backup.mjs
+COPY scripts/backup.mjs scripts/internal-jobs.mjs ./scripts/
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s CMD node -e "fetch('http://127.0.0.1:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"

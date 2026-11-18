@@ -1,0 +1,397 @@
+# API usług wewnętrznych hotelu (W-01–W-05). Nie jest przeznaczone dla innych grup.
+openapi: 3.0.3
+info:
+  title: API wewnętrzne Aurora Hotels
+  version: 1.0.0
+  description:
+    Operacje dla usług technicznych hotelu - monitoringu, harmonogramu i kopii zapasowych. Każda usługa ma
+    własny token (npm run service-token -- create <usługa>) ze stałym zakresem uprawnień. Sesja użytkownika
+    i klucz partnera nie są tu przyjmowane, a token usługi nie działa pod /api/v1. Na serwerze publicznym
+    ścieżkę /internal udostępniamy tylko z sieci lokalnej (docs/wdrozenie-vps.md).
+servers:
+  - url: http://127.0.0.1:3001/internal/v1
+    description: Adres na serwerze hotelu.
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+tags:
+  - name: Monitoring
+  - name: Harmonogram
+  - name: Kopie zapasowe
+paths:
+  /health/ready:
+    get:
+      summary: Sprawdź gotowość serwera i połączeń
+      operationId: getInternalReady
+      tags:
+        - Monitoring
+      description:
+        Wymaga zakresu health:read (usługa monitoring). Stan degraded oznacza, że ostatni test
+        włączonego połączenia z A, B lub D się nie udał. Wyłączone połączenie nie obniża stanu.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /operations/pending:
+    get:
+      summary: Pokaż operacje partnerów do wyjaśnienia
+      operationId: getInternalPendingOperations
+      tags:
+        - Monitoring
+        - Harmonogram
+      description:
+        Wymaga zakresu operations:read (usługi monitoring i scheduler). Lista nie zawiera nazwisk
+        gości, numerów voucherów ani treści żądań.
+      parameters:
+        - name: partner
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - A
+              - B
+              - D
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PendingOperation'
+                  total:
+                    type: integer
+                    minimum: 0
+                  page:
+                    type: integer
+                    minimum: 1
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /operations/{operationId}/reconcile:
+    post:
+      summary: Ustal wynik niepewnej operacji
+      operationId: reconcileInternalOperation
+      tags:
+        - Harmonogram
+      description:
+        Wymaga zakresu operations:reconcile (usługa scheduler). Pyta partnera o wynik tak jak
+        przycisk „Odśwież” recepcji. Nie tworzy nowego zamówienia - używa zapisanego identyfikatora operacji.
+        Gdy partner nadal nie odpowiada, odpowiedź ma status bez zmian i opis błędu w polu error.
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconcileResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+  /maintenance/cleanup:
+    post:
+      summary: Usuń wygasłe sesje i stare klucze ponowienia
+      operationId: runInternalCleanup
+      tags:
+        - Harmonogram
+      description:
+        Wymaga zakresu maintenance:run (usługa scheduler). Usuwa wygasłe sesje oraz klucze
+        ponowienia starsze niż 7 dni. Nie dotyka rezerwacji, kont ani historii operacji. Serwer wykonuje to
+        samo co godzinę także bez wywołania.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /backups:
+    post:
+      summary: Utwórz spójną kopię bazy
+      operationId: createInternalBackup
+      tags:
+        - Kopie zapasowe
+      description:
+        Wymaga zakresu backups:create (usługa backup). Kopia powstaje w katalogu BACKUP_DIR
+        na serwerze; odpowiedź zawiera tylko nazwę pliku. Usługa nie może kopii pobrać, odtworzyć ani usunąć.
+      responses:
+        '201':
+          description: Utworzono kopię
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Token usługi wewnętrznej (aurora_svc_...).
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Ten sam token usługi w nagłówku X-API-Key. Nie podawaj obu nagłówków naraz.
+  responses:
+    Error:
+      description: Błąd
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            fields:
+              type: object
+              additionalProperties: true
+          required:
+            - code
+            - message
+            - fields
+      required:
+        - error
+    IntegrationReadiness:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        mode:
+          type: string
+          enum:
+            - demo
+            - real
+        lastTestOk:
+          type: boolean
+          nullable: true
+          description: Wynik ostatniego testu połączenia; null, gdy testu nie wykonano.
+        lastTestAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - enabled
+        - mode
+        - lastTestOk
+        - lastTestAt
+    Readiness:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - degraded
+        database:
+          type: string
+          enum:
+            - ok
+        integrations:
+          type: object
+          properties:
+            A:
+              $ref: '#/components/schemas/IntegrationReadiness'
+            B:
+              $ref: '#/components/schemas/IntegrationReadiness'
+            D:
+              $ref: '#/components/schemas/IntegrationReadiness'
+          required:
+            - A
+            - B
+            - D
+      required:
+        - status
+        - database
+        - integrations
+    PendingOperation:
+      type: object
+      properties:
+        operationId:
+          type: string
+        partner:
+          type: string
+          enum:
+            - A
+            - B
+            - D
+        kind:
+          type: string
+          enum:
+            - booking
+            - cancellation
+            - voucher_completion
+        status:
+          type: string
+          enum:
+            - pending
+            - unknown
+            - cancel_pending
+        reservationId:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - operationId
+        - partner
+        - kind
+        - status
+        - reservationId
+        - updatedAt
+    ReconcileResult:
+      type: object
+      properties:
+        operationId:
+          type: string
+        partner:
+          type: string
+          enum:
+            - A
+            - B
+            - D
+        status:
+          type: string
+          description: Stan po zapytaniu partnera, np. confirmed, cancelled, reported albo nadal unknown.
+        changed:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+          description: Ostatni błąd partnera, jeśli wynik nadal jest niepewny.
+      required:
+        - operationId
+        - partner
+        - status
+        - changed
+        - error
+    CleanupResult:
+      type: object
+      properties:
+        sessionsRemoved:
+          type: integer
+          minimum: 0
+        idempotencyRecordsRemoved:
+          type: integer
+          minimum: 0
+      required:
+        - sessionsRemoved
+        - idempotencyRecordsRemoved
+    BackupResult:
+      type: object
+      properties:
+        file:
+          type: string
+        sizeBytes:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - file
+        - sizeBytes
+        - createdAt

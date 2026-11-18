@@ -2,7 +2,7 @@
 
 Przeznaczenie: podział operacji API na grupy, role i konta techniczne, macierz uprawnień oraz uzasadnienie decyzji (zadanie 2 z przedmiotu Projekt Zespołowy). Opiekunowie: Adrian Zieliński, Andrii Yaremko; uzgodnienie danych: Wiktoria Sobejko.
 
-Szczegóły każdej operacji (parametry, odpowiedzi, błędy) są w [kartach endpointów](karty-endpointow.md), a pełny kontrakt w [openapi.yaml](../openapi.yaml). Instrukcję wywołań dla innych grup zawiera [API hotelu](README.md).
+Szczegóły każdej operacji (parametry, odpowiedzi, błędy) są w [kartach endpointów](karty-endpointow.md), a pełny kontrakt w [openapi.yaml](../openapi.yaml) i, dla operacji wewnętrznych, w [openapi-internal.yaml](../openapi-internal.yaml). Instrukcję wywołań dla innych grup zawiera [API hotelu](README.md).
 
 ## Zakres systemu
 
@@ -23,7 +23,7 @@ Najważniejsze funkcje udostępniane przez API:
 - administracja: pokoje, pakiety, konta, ustawienia hotelu, połączenia z partnerami, klucze API i historia operacji;
 - utrzymanie: gotowość serwera, operacje do wyjaśnienia, porządkowanie bazy i kopia zapasowa.
 
-Katalog obejmuje 54 operacje: 7 publicznych, 42 zewnętrzne z tokenem i 5 wewnętrznych. Operacje publiczne i zewnętrzne z tokenem są zaimplementowane i opisane w pliku `docs/openapi.yaml`; zadanie wymagało projektu, ale ta część powstała wcześniej, więc opisujemy rzeczywiste zachowanie aplikacji. Operacje wewnętrzne są projektem i nie zostały jeszcze zaimplementowane.
+Katalog obejmuje 55 operacji: 8 publicznych, 42 zewnętrzne z tokenem i 5 wewnętrznych. Wszystkie są zaimplementowane: operacje publiczne i zewnętrzne z tokenem opisuje plik `docs/openapi.yaml`, a wewnętrzne plik `docs/openapi-internal.yaml`. Zadanie wymagało projektu, ale aplikacja powstała wcześniej, więc opisujemy jej rzeczywiste zachowanie.
 
 ## Role i konta techniczne
 
@@ -34,7 +34,7 @@ Katalog obejmuje 54 operacje: 7 publicznych, 42 zewnętrzne z tokenem i 5 wewnę
 | Recepcjonista              | użytkownik (sesja)                   | Wszystkie rezerwacje hotelu: utworzenie dla gościa, odczyt, zmiana, anulowanie, zameldowanie, wymeldowanie, lista gości, usługi A/B i voucher D. Nie ma dostępu do oferty, kont, ustawień, połączeń, kluczy API ani historii operacji.                                           |
 | Administrator              | użytkownik (sesja)                   | To samo co recepcjonista oraz cała administracja. Nie może zablokować ani zdegradować ostatniego aktywnego administratora. Nie widzi haseł, wartości kluczy ani sekretów partnerów (tylko maski). Nie ma dostępu do operacji wewnętrznych. Historii operacji nie da się zmienić. |
 | Partner API, np. projekt D | usługa zewnętrzna (klucz API)        | Wyłącznie operacje objęte zakresami klucza i wyłącznie rezerwacje utworzone kluczami tego partnera. Voucher może przekazać tylko partner oznaczony `D`. Nie ma dostępu do kont, recepcji ani administracji.                                                                      |
-| Harmonogram                | usługa wewnętrzna (token usługi)     | W-03 i W-04: wyjaśnianie niepewnych operacji i porządkowanie bazy. Nie tworzy nowych zamówień i nie czyta danych gości.                                                                                                                                                          |
+| Harmonogram                | usługa wewnętrzna (token usługi)     | W-02, W-03 i W-04: lista i wyjaśnianie niepewnych operacji oraz porządkowanie bazy. Nie tworzy nowych zamówień i nie czyta danych gości.                                                                                                                                         |
 | Kopia zapasowa             | usługa wewnętrzna (token usługi)     | W-05: zlecenie kopii bazy. Nie może kopii pobrać, odtworzyć ani usunąć.                                                                                                                                                                                                          |
 | Monitoring                 | usługa wewnętrzna (token usługi)     | W-01 i W-02: stan techniczny i lista operacji do wyjaśnienia, bez danych gości. Publiczne ZP-01 wywołuje bez tokenu.                                                                                                                                                             |
 
@@ -42,21 +42,23 @@ Rolę użytkownika serwer odczytuje z bazy przy każdym żądaniu; nie da się j
 
 Zakresy klucza partnera:
 
-| Zakres                | Na co pozwala                               | Operacje                                        |
-| --------------------- | ------------------------------------------- | ----------------------------------------------- |
-| `catalog:read`        | Odczyt pokoi, pakietów i dostępności        | ZP-05, ZP-06, ZP-07 (gdy żądanie zawiera klucz) |
-| `reservations:create` | Utworzenie rezerwacji                       | ZT-05                                           |
-| `reservations:read`   | Odczyt własnych rezerwacji i planu pobytu   | ZT-06, ZT-07, ZT-10                             |
-| `reservations:update` | Zmiana własnej potwierdzonej rezerwacji     | ZT-08                                           |
-| `reservations:cancel` | Anulowanie własnej potwierdzonej rezerwacji | ZT-09                                           |
+| Zakres                | Na co pozwala                                             | Operacje                                |
+| --------------------- | --------------------------------------------------------- | --------------------------------------- |
+| `catalog:read`        | Odczyt pokoi, pakietów, dostępności i włączonych połączeń | ZP-05–ZP-08 (gdy żądanie zawiera klucz) |
+| `reservations:create` | Utworzenie rezerwacji                                     | ZT-05                                   |
+| `reservations:read`   | Odczyt własnych rezerwacji i planu pobytu                 | ZT-06, ZT-07, ZT-10                     |
+| `reservations:update` | Zmiana własnej potwierdzonej rezerwacji                   | ZT-08                                   |
+| `reservations:cancel` | Anulowanie własnej potwierdzonej rezerwacji               | ZT-09                                   |
 
-Zakresy tokenów usług wewnętrznych (projekt):
+Zakresy tokenów usług wewnętrznych. Zakres wynika z rodzaju usługi i nie da się go rozszerzyć:
 
-| Konto techniczne | Zakresy                                   | Operacje   |
-| ---------------- | ----------------------------------------- | ---------- |
-| Harmonogram      | `operations:reconcile`, `maintenance:run` | W-03, W-04 |
-| Kopia zapasowa   | `backups:create`                          | W-05       |
-| Monitoring       | `health:read`, `operations:read`          | W-01, W-02 |
+| Konto techniczne | Zakresy                                                      | Operacje         |
+| ---------------- | ------------------------------------------------------------ | ---------------- |
+| Harmonogram      | `operations:read`, `operations:reconcile`, `maintenance:run` | W-02, W-03, W-04 |
+| Kopia zapasowa   | `backups:create`                                             | W-05             |
+| Monitoring       | `health:read`, `operations:read`                             | W-01, W-02       |
+
+Token usługi wydaje osoba z dostępem do serwera poleceniem `npm run service-token -- create <monitoring|scheduler|backup>`, a nie przez API. Dzięki temu nawet przejęte konto administratora nie pozwala utworzyć tokenu usługi. W bazie zapisujemy tylko skrót SHA-256 tokenu; polecenie `list` pokazuje tokeny bez wartości, a `revoke` je wyłącza.
 
 Hotel jest też klientem API pozostałych grup. W każdym z tych systemów potrzebuje konta technicznego z najmniejszym możliwym zakresem: u A i B odczyt oferty i terminów oraz utworzenie, odczyt i anulowanie własnych zamówień; u D sprawdzenie i zgłoszenie wykonania wyłącznie hotelowej części vouchera. Sekrety tych kont są zaszyfrowane w bazie hotelu i nie trafiają do przeglądarki. Są to endpointy innych systemów, dlatego nie należą do naszego katalogu; proponowany kontrakt jest w pliku `docs/api/integracje.md`.
 
@@ -66,7 +68,7 @@ Hotel jest też klientem API pozostałych grup. W każdym z tych systemów potrz
 
 **Zewnętrzne z tokenem (ZT)** to wszystko, z czego korzysta zalogowany użytkownik w przeglądarce, oraz operacje udostępnione serwerowi partnera. Zgodnie z poleceniem endpoint używany przez aplikację przeglądarkową zaliczamy do zewnętrznych, także wtedy, gdy korzysta z niego wyłącznie personel. Tokenem użytkownika jest sesja w cookie, a tokenem partnera klucz API.
 
-**Wewnętrzne z tokenem (W)** służą usługom technicznym hotelu. Aplikacja jest dziś jednym procesem, więc nie ma jeszcze komunikacji między usługami: porządkowanie bazy wykonuje licznik wewnątrz serwera, a kopię bazy polecenie `npm run backup`. Projektujemy te operacje po to, żeby harmonogram, kopia i monitoring mogły działać jako osobne usługi bez konta administratora i bez dostępu do danych gości. Mają osobny prefiks `/internal/v1`, którego serwer pośredniczący nie wystawia do Internetu, i przyjmują wyłącznie tokeny usług.
+**Wewnętrzne z tokenem (W)** służą usługom technicznym hotelu: monitoringowi, harmonogramowi i kopii zapasowej. Każda z nich działa jako osobny proces (np. zadanie crona z poleceniem `npm run jobs -- reconcile`) bez konta administratora i bez dostępu do danych gości. Operacje mają osobny prefiks `/internal/v1`, którego serwer pośredniczący nie wystawia do Internetu (instrukcja w `docs/wdrozenie-vps.md`), i przyjmują wyłącznie tokeny usług. Aplikacja w przeglądarce z nich nie korzysta.
 
 Projekty A, B i D są dla nas partnerami integracyjnymi, a nie komponentami naszego systemu. Dlatego operacje, z których korzysta serwer D, należą do grupy ZT, a wywołania wychodzące z hotelu do A, B i D nie są częścią tego katalogu.
 
@@ -76,15 +78,15 @@ Każdy wiersz to jedna operacja. Identyfikator prowadzi do karty operacji.
 
 ### Wewnętrzne wymagające tokenu (W)
 
-Projekt; operacje nie są jeszcze zaimplementowane.
+Kontrakt: [openapi-internal.yaml](../openapi-internal.yaml). Wywołują je wyłącznie usługi techniczne hotelu.
 
-| ID                                                                             | Metoda HTTP i ścieżka                                  | Funkcja i odbiorca                                                                                                                           |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| [W-01](karty-endpointow.md#w-01--sprawdź-gotowość-serwera-i-połączeń)          | `GET /internal/v1/health/ready`                        | Szczegółowa gotowość: baza danych oraz stan połączeń z A, B i D. Odbiorca: usługa monitoringu.                                               |
-| [W-02](karty-endpointow.md#w-02--pokaż-operacje-partnerów-do-wyjaśnienia)      | `GET /internal/v1/operations/pending`                  | Lista operacji A/B/D o niepewnym wyniku, żeby monitoring mógł zgłosić je recepcji. Odbiorca: usługa monitoringu.                             |
-| [W-03](karty-endpointow.md#w-03--ustal-wynik-niepewnej-operacji)               | `POST /internal/v1/operations/{operationId}/reconcile` | Ponowne zapytanie partnera o wynik jednej niepewnej operacji, tak jak robi to recepcja przyciskiem „Odśwież”. Odbiorca: usługa harmonogramu. |
-| [W-04](karty-endpointow.md#w-04--usuń-wygasłe-sesje-i-stare-klucze-ponowienia) | `POST /internal/v1/maintenance/cleanup`                | Porządkowanie bazy: wygasłe sesje i klucze ponowienia starsze niż 7 dni. Odbiorca: usługa harmonogramu.                                      |
-| [W-05](karty-endpointow.md#w-05--utwórz-spójną-kopię-bazy)                     | `POST /internal/v1/backups`                            | Kopia bazy SQLite wykonana mechanizmem kopii zapasowej. Odbiorca: usługa kopii zapasowych.                                                   |
+| ID                                                                             | Metoda HTTP i ścieżka                                  | Funkcja i odbiorca                                                                                                                                                                   |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [W-01](karty-endpointow.md#w-01--sprawdź-gotowość-serwera-i-połączeń)          | `GET /internal/v1/health/ready`                        | Szczegółowa gotowość: baza danych oraz stan połączeń z A, B i D. Odbiorca: usługa monitoringu (polecenie `npm run jobs -- ready`).                                                   |
+| [W-02](karty-endpointow.md#w-02--pokaż-operacje-partnerów-do-wyjaśnienia)      | `GET /internal/v1/operations/pending`                  | Lista operacji A/B/D o niepewnym wyniku: monitoring zgłasza je recepcji, a harmonogram wybiera z niej operacje do wyjaśnienia. Odbiorca: usługi monitoringu i harmonogramu.          |
+| [W-03](karty-endpointow.md#w-03--ustal-wynik-niepewnej-operacji)               | `POST /internal/v1/operations/{operationId}/reconcile` | Ponowne zapytanie partnera o wynik jednej niepewnej operacji, tak jak robi to recepcja przyciskiem „Odśwież”. Odbiorca: usługa harmonogramu (polecenie `npm run jobs -- reconcile`). |
+| [W-04](karty-endpointow.md#w-04--usuń-wygasłe-sesje-i-stare-klucze-ponowienia) | `POST /internal/v1/maintenance/cleanup`                | Porządkowanie bazy: wygasłe sesje i klucze ponowienia starsze niż 7 dni. Serwer robi to także sam co godzinę; wywołanie pozwala uruchomić je od razu. Odbiorca: usługa harmonogramu. |
+| [W-05](karty-endpointow.md#w-05--utwórz-spójną-kopię-bazy)                     | `POST /internal/v1/backups`                            | Kopia bazy SQLite wykonana mechanizmem kopii zapasowej SQLite, bez zatrzymywania serwera. Odbiorca: usługa kopii zapasowych (polecenie `npm run jobs -- backup`).                    |
 
 ### Zewnętrzne wymagające tokenu (ZT)
 
@@ -135,15 +137,16 @@ Projekt; operacje nie są jeszcze zaimplementowane.
 
 ### Zewnętrzne bez tokenu (ZP)
 
-| ID                                                              | Metoda HTTP i ścieżka        | Funkcja i odbiorca                                                                                                        |
-| --------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [ZP-01](karty-endpointow.md#zp-01--sprawdź-czy-serwer-działa)   | `GET /health`                | Sprawdzenie, czy serwer działa. Odbiorca: Docker (healthcheck), monitoring, osoba uruchamiająca aplikację.                |
-| [ZP-02](karty-endpointow.md#zp-02--pobierz-token-csrf)          | `GET /api/v1/auth/csrf`      | Utworzenie anonimowej sesji i pobranie tokenu CSRF przed logowaniem lub rejestracją. Odbiorca: aplikacja przeglądarkowa.  |
-| [ZP-03](karty-endpointow.md#zp-03--załóż-konto-klienta)         | `POST /api/v1/auth/register` | Założenie konta klienta. Odbiorca: gość korzystający z aplikacji przeglądarkowej.                                         |
-| [ZP-04](karty-endpointow.md#zp-04--zaloguj-się)                 | `POST /api/v1/auth/login`    | Zalogowanie użytkownika i rozpoczęcie sesji. Odbiorca: klient, recepcjonista i administrator w aplikacji przeglądarkowej. |
-| [ZP-05](karty-endpointow.md#zp-05--pokaż-pokoje-w-ofercie)      | `GET /api/v1/rooms`          | Lista pokoi w ofercie. Odbiorca: gość i klient w przeglądarce oraz serwer partnera (D).                                   |
-| [ZP-06](karty-endpointow.md#zp-06--pokaż-pakiety-w-ofercie)     | `GET /api/v1/packages`       | Lista pakietów w ofercie. Odbiorca: gość i klient w przeglądarce oraz serwer partnera (D).                                |
-| [ZP-07](karty-endpointow.md#zp-07--sprawdź-wolne-pokoje-i-cenę) | `GET /api/v1/availability`   | Wolne pokoje i wycena dla podanych dat i liczby gości. Odbiorca: gość i klient w przeglądarce oraz serwer partnera (D).   |
+| ID                                                                                | Metoda HTTP i ścieżka        | Funkcja i odbiorca                                                                                                                                                                                |
+| --------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [ZP-01](karty-endpointow.md#zp-01--sprawdź-czy-serwer-działa)                     | `GET /health`                | Sprawdzenie, czy serwer działa. Odbiorca: Docker (healthcheck), monitoring, osoba uruchamiająca aplikację.                                                                                        |
+| [ZP-02](karty-endpointow.md#zp-02--pobierz-token-csrf)                            | `GET /api/v1/auth/csrf`      | Utworzenie anonimowej sesji i pobranie tokenu CSRF przed logowaniem lub rejestracją. Odbiorca: aplikacja przeglądarkowa.                                                                          |
+| [ZP-03](karty-endpointow.md#zp-03--załóż-konto-klienta)                           | `POST /api/v1/auth/register` | Założenie konta klienta. Odbiorca: gość korzystający z aplikacji przeglądarkowej.                                                                                                                 |
+| [ZP-04](karty-endpointow.md#zp-04--zaloguj-się)                                   | `POST /api/v1/auth/login`    | Zalogowanie użytkownika i rozpoczęcie sesji. Odbiorca: klient, recepcjonista i administrator w aplikacji przeglądarkowej.                                                                         |
+| [ZP-05](karty-endpointow.md#zp-05--pokaż-pokoje-w-ofercie)                        | `GET /api/v1/rooms`          | Lista pokoi w ofercie. Odbiorca: gość i klient w przeglądarce oraz serwer partnera (D).                                                                                                           |
+| [ZP-06](karty-endpointow.md#zp-06--pokaż-pakiety-w-ofercie)                       | `GET /api/v1/packages`       | Lista pakietów w ofercie. Odbiorca: gość i klient w przeglądarce oraz serwer partnera (D).                                                                                                        |
+| [ZP-07](karty-endpointow.md#zp-07--sprawdź-wolne-pokoje-i-cenę)                   | `GET /api/v1/availability`   | Wolne pokoje i wycena dla podanych dat i liczby gości. Odbiorca: gość i klient w przeglądarce oraz serwer partnera (D).                                                                           |
+| [ZP-08](karty-endpointow.md#zp-08--pokaż-włączone-połączenia-z-innymi-projektami) | `GET /api/v1/features`       | Informacja, które połączenia z innymi projektami są włączone: masaże (A), treningi (B), vouchery (D). Odbiorca: aplikacja w przeglądarce, która ukrywa niedostępne funkcje, oraz serwer partnera. |
 
 Poza katalogiem pozostają dwa adresy z dokumentacją, dostępne bez tokenu: `/api/docs` (interaktywny opis) i `/api/openapi.yaml` (plik kontraktu). Nie są operacjami na danych hotelu.
 
@@ -158,7 +161,7 @@ Poza katalogiem pozostają dwa adresy z dokumentacją, dostępne bez tokenu: `/a
 | ID operacji | Gość | Klient | Recepcjonista | Administrator | Partner API | Harmonogram | Kopia zapasowa | Monitoring |
 | ----------- | ---- | ------ | ------------- | ------------- | ----------- | ----------- | -------------- | ---------- |
 | W-01        | B    | B      | B             | B             | B           | B           | B              | O5         |
-| W-02        | B    | B      | B             | B             | B           | B           | B              | O5         |
+| W-02        | B    | B      | B             | B             | B           | O5          | B              | O5         |
 | W-03        | B    | B      | B             | B             | B           | O5          | B              | B          |
 | W-04        | B    | B      | B             | B             | B           | O5          | B              | B          |
 | W-05        | B    | B      | B             | B             | B           | B           | O5             | B          |
@@ -211,10 +214,11 @@ Poza katalogiem pozostają dwa adresy z dokumentacją, dostępne bez tokenu: `/a
 | ZP-05       | D    | D      | D             | D             | O1          | —           | —              | —          |
 | ZP-06       | D    | D      | D             | D             | O1          | —           | —              | —          |
 | ZP-07       | D    | D      | D             | D             | O1          | —           | —              | —          |
+| ZP-08       | D    | D      | D             | D             | O1          | —           | —              | —          |
 
 Opis ograniczeń:
 
-- **O1** — klucz partnera musi mieć zakres wymagany przez operację: `catalog:read` (ZP-05–ZP-07), `reservations:create` (ZT-05), `reservations:read` (ZT-06, ZT-07, ZT-10), `reservations:update` (ZT-08), `reservations:cancel` (ZT-09).
+- **O1** — klucz partnera musi mieć zakres wymagany przez operację: `catalog:read` (ZP-05–ZP-08), `reservations:create` (ZT-05), `reservations:read` (ZT-06, ZT-07, ZT-10), `reservations:update` (ZT-08), `reservations:cancel` (ZT-09).
 - **O2** — tylko rezerwacja w stanie „potwierdzona” i tylko przed dniem przyjazdu. Od dnia przyjazdu zmianę i anulowanie wykonuje personel.
 - **O3** — pola vouchera (`voucherReference`, `hotelComponentId`) przyjmowane są wyłącznie od personelu i od partnera oznaczonego `D`. Klient i pozostali partnerzy tworzą tylko zwykłe rezerwacje.
 - **O4** — administrator nie może zablokować ani zdegradować ostatniego aktywnego administratora, także samego siebie.
@@ -233,7 +237,7 @@ Kolumny usług wewnętrznych mają B przy operacjach ZT, ponieważ token usługi
 - **Sesja użytkownika.** Po zalogowaniu przeglądarka dostaje cookie `aurora_session` (`HttpOnly`, `SameSite=Lax`, przy HTTPS także `Secure`) z losowym identyfikatorem. Serwer przechowuje tylko jego skrót HMAC-SHA-256 i termin ważności, domyślnie 12 godzin. Przy każdym żądaniu wyszukuje niewygasłą sesję, a potem konto i sprawdza, czy jest aktywne. Zablokowane konto traci dostęp od następnego żądania. Logowanie, rejestracja i zmiana hasła tworzą nową sesję; zmiana i reset hasła kończą pozostałe.
 - **Token CSRF.** Każde żądanie zapisu z przeglądarki musi mieć nagłówek `X-CSRF-Token` zgodny z sesją oraz nagłówek `Origin` zgodny z adresem aplikacji. Token CSRF nie uwierzytelnia; chroni przed wykonaniem operacji przez obcą stronę.
 - **Klucz partnera.** Klucz ma postać `aurora_` i 32 losowe bajty. W bazie jest tylko jego skrót SHA-256. Przy każdym żądaniu serwer liczy skrót, wyszukuje klucz, sprawdza, czy jest aktywny, i odczytuje jego zakresy. Odebranie zakresu albo wyłączenie klucza działa od następnego żądania, bez restartu.
-- **Token usługi wewnętrznej (projekt).** Ten sam mechanizm co klucz partnera, ale osobny zbiór tokenów przyjmowany wyłącznie pod `/internal/v1`.
+- **Token usługi wewnętrznej.** Ma postać `aurora_svc_` i 32 losowe bajty. Działa jak klucz partnera (te same nagłówki, w bazie tylko skrót SHA-256, wyłączenie od następnego żądania), ale jest osobnym zbiorem tokenów przyjmowanym wyłącznie pod `/internal/v1`. Sesja użytkownika i klucz partnera nie są tam przyjmowane, a token usługi nie działa pod `/api/v1`.
 - **Jedna tożsamość na żądanie.** Żądanie z dwoma nagłówkami klucza dostaje 400, a żądanie z kluczem i sesją jednocześnie 403 `AMBIGUOUS_AUTH`. Uprawnień sesji i klucza nie da się połączyć.
 
 ### Jak sprawdzamy rolę lub zakres uprawnień wymagany przez operację?
@@ -261,21 +265,23 @@ Bez tokenu przyjmujemy dane rejestracji i logowania, bo użytkownik nie ma jeszc
 
 ### Odpowiedzi przy braku tokenu, nieprawidłowym tokenie i braku uprawnień
 
-| Sytuacja                                                        | Odpowiedź                                       | Co oznacza                                                             |
-| --------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------- |
-| Chroniona operacja odczytu bez sesji i bez klucza               | 401 `AUTH_REQUIRED`                             | Nie wiemy, kto pyta                                                    |
-| Sesja wygasła, została zakończona albo konto zablokowano        | 401 `AUTH_REQUIRED`                             | Taka sesja jest traktowana jak brak sesji                              |
-| Klucz partnera błędny lub wyłączony                             | 401 `INVALID_API_KEY`                           | Token nie potwierdza tożsamości                                        |
-| Pusty klucz albo `Authorization` w schemacie innym niż `Bearer` | 401 `API_KEY_INVALID` / `INVALID_AUTHORIZATION` | Token nie potwierdza tożsamości                                        |
-| Żądanie zapisu z przeglądarki bez zgodnego tokenu CSRF          | 403 `CSRF_INVALID`                              | Żądanie nie pochodzi z naszego formularza; sprawdzane przed logowaniem |
-| Żądanie zapisu z poprawnym tokenem CSRF, ale bez zalogowania    | 401 `AUTH_REQUIRED`                             | Nie wiemy, kto pyta                                                    |
-| Poprawna sesja, rola bez uprawnień do operacji                  | 403 `FORBIDDEN`                                 | Wiemy, kto pyta, ale nie ma on prawa do operacji                       |
-| Poprawny klucz bez wymaganego zakresu                           | 403 `SCOPE_REQUIRED`                            | Jak wyżej, dla partnera                                                |
-| Poprawny klucz na operacji przeznaczonej dla użytkownika        | 403 `USER_REQUIRED` albo `FORBIDDEN`            | Jak wyżej                                                              |
-| Konto z hasłem tymczasowym                                      | 403 `PASSWORD_CHANGE_REQUIRED`                  | Najpierw trzeba ustawić własne hasło                                   |
-| Sesja i klucz w jednym żądaniu                                  | 403 `AMBIGUOUS_AUTH`                            | Nie łączymy dwóch tożsamości                                           |
-| Poprawna tożsamość, cudza rezerwacja                            | 404 `RESERVATION_NOT_FOUND`                     | Nie potwierdzamy istnienia cudzego zasobu                              |
-| Za dużo żądań                                                   | 429 `RATE_LIMITED`                              | Nagłówek `Retry-After` podaje czas oczekiwania                         |
+| Sytuacja                                                      | Odpowiedź                            | Co oznacza                                                             |
+| ------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
+| Chroniona operacja odczytu bez sesji i bez klucza             | 401 `AUTH_REQUIRED`                  | Nie wiemy, kto pyta                                                    |
+| Sesja wygasła, została zakończona albo konto zablokowano      | 401 `AUTH_REQUIRED`                  | Taka sesja jest traktowana jak brak sesji                              |
+| Klucz partnera błędny lub wyłączony                           | 401 `INVALID_API_KEY`                | Token nie potwierdza tożsamości                                        |
+| Pusty klucz                                                   | 401 `INVALID_API_KEY`                | Token nie potwierdza tożsamości                                        |
+| `Authorization` w schemacie innym niż `Bearer`                | 401 `INVALID_AUTHORIZATION`          | Nagłówek nie zawiera tokenu                                            |
+| Żądanie zapisu bez cookie sesji, bez tokenu CSRF i bez klucza | 401 `AUTH_REQUIRED`                  | Nie wiemy, kto pyta, np. partner zapomniał o kluczu                    |
+| Żądanie zapisu z sesją przeglądarki bez zgodnego tokenu CSRF  | 403 `CSRF_INVALID`                   | Żądanie nie pochodzi z naszego formularza; sprawdzane przed logowaniem |
+| Żądanie zapisu z poprawnym tokenem CSRF, ale bez zalogowania  | 401 `AUTH_REQUIRED`                  | Nie wiemy, kto pyta                                                    |
+| Poprawna sesja, rola bez uprawnień do operacji                | 403 `FORBIDDEN`                      | Wiemy, kto pyta, ale nie ma on prawa do operacji                       |
+| Poprawny klucz bez wymaganego zakresu                         | 403 `SCOPE_REQUIRED`                 | Jak wyżej, dla partnera                                                |
+| Poprawny klucz na operacji przeznaczonej dla użytkownika      | 403 `USER_REQUIRED` albo `FORBIDDEN` | Jak wyżej                                                              |
+| Konto z hasłem tymczasowym                                    | 403 `PASSWORD_CHANGE_REQUIRED`       | Najpierw trzeba ustawić własne hasło                                   |
+| Sesja i klucz w jednym żądaniu                                | 403 `AMBIGUOUS_AUTH`                 | Nie łączymy dwóch tożsamości                                           |
+| Poprawna tożsamość, cudza rezerwacja                          | 404 `RESERVATION_NOT_FOUND`          | Nie potwierdzamy istnienia cudzego zasobu                              |
+| Za dużo żądań                                                 | 429 `RATE_LIMITED`                   | Nagłówek `Retry-After` podaje czas oczekiwania                         |
 
 Zasada: **401** oznacza „nie wiemy, kim jesteś” i wymaga zalogowania albo poprawnego klucza. **403** oznacza „wiemy, kim jesteś, ale nie możesz tego zrobić”; ponowne logowanie nic nie zmieni. **404** stosujemy zamiast 403 tam, gdzie sama informacja o istnieniu zasobu byłaby wyciekiem.
 
@@ -290,12 +296,12 @@ ID operacji: **W-03**
 Żądanie HTTP:
 
 ```http
-POST /internal/v1/operations/c-booking-7f3a2c/reconcile HTTP/1.1
+POST /internal/v1/operations/9b2f6c1e-4d7a-4a51-8f0e-3c6d2a1b7e45/reconcile HTTP/1.1
 Host: 127.0.0.1:3001
 Authorization: Bearer <TOKEN_TESTOWY>
 ```
 
-Odpowiedź poprawna: 200 OK. Przykład projektowy: operacja nie jest jeszcze zaimplementowana.
+Odpowiedź poprawna: 200 OK. Harmonogram pyta partnera A o wynik zamówienia masażu, które po przekroczeniu czasu miało stan `unknown`. Wynik pochodzi z testu `backend/tests/internal.test.ts`. Identyfikator operacji jest przykładowy.
 
 ```http
 HTTP/1.1 200 OK
@@ -303,10 +309,11 @@ Content-Type: application/json; charset=utf-8
 Cache-Control: no-store
 
 {
-  "operationId": "c-booking-7f3a2c",
+  "operationId": "9b2f6c1e-4d7a-4a51-8f0e-3c6d2a1b7e45",
   "partner": "A",
   "status": "confirmed",
-  "changed": true
+  "changed": true,
+  "error": null
 }
 ```
 
@@ -551,11 +558,16 @@ Content-Type: application/json; charset=utf-8
 | Dowolna operacja ZT kontem z hasłem tymczasowym                           | 403 `PASSWORD_CHANGE_REQUIRED`                    | sprawdzone; test automatyczny             |
 | ZT-29 blokada ostatniego administratora                                   | 409 `LAST_ADMIN`                                  | sprawdzone; test automatyczny             |
 | ZT-02 po wylogowaniu                                                      | 401 `AUTH_REQUIRED`                               | sprawdzone                                |
-| W-03 bez nagłówka `Authorization`                                         | 401 `AUTH_REQUIRED`                               | zaplanowane (projekt)                     |
-| W-03 z tokenem usługi „Kopia zapasowa”                                    | 403 `SCOPE_REQUIRED`                              | zaplanowane (projekt)                     |
-| W-05 z sesją administratora albo kluczem partnera                         | 401 `INVALID_API_KEY`: to nie jest token usługi   | zaplanowane (projekt)                     |
+| W-01 bez nagłówka i z samą sesją administratora                           | 401 `AUTH_REQUIRED`                               | test automatyczny                         |
+| W-01 z kluczem partnera                                                   | 401 `INVALID_API_KEY`: to nie jest token usługi   | test automatyczny                         |
+| W-01 z tokenem usługi „Kopia zapasowa”                                    | 403 `SCOPE_REQUIRED`                              | test automatyczny                         |
+| W-03 z tokenem usługi „Monitoring”                                        | 403 `SCOPE_REQUIRED`; operacja bez zmian          | test automatyczny                         |
+| ZT-06 z tokenem usługi wewnętrznej                                        | 401 `INVALID_API_KEY`                             | test automatyczny                         |
+| W-01 z wyłączonym tokenem usługi                                          | 401 `INVALID_API_KEY`                             | test automatyczny                         |
+| W-02 jako monitoring                                                      | Lista bez nazwisk gości i numerów voucherów       | test automatyczny                         |
+| ZT-05 bez cookie sesji, tokenu CSRF i klucza                              | 401 `AUTH_REQUIRED`                               | test automatyczny                         |
 
-„Sprawdzone” oznacza, że 16 listopada 2026 wykonaliśmy takie żądanie na uruchomionej aplikacji i otrzymaliśmy podany wynik. „Test automatyczny” oznacza, że ten sam przypadek sprawdza test w `backend/tests/` (głównie `hotel.test.ts` i `security-audit.test.ts`) przy każdym uruchomieniu `npm test`.
+„Sprawdzone” oznacza, że 16 listopada 2026 wykonaliśmy takie żądanie na uruchomionej aplikacji i otrzymaliśmy podany wynik. „Test automatyczny” oznacza, że ten sam przypadek sprawdza test w `backend/tests/` (głównie `hotel.test.ts`, `security-audit.test.ts` i `internal.test.ts`) przy każdym uruchomieniu `npm test`.
 
 ## Decyzje projektowe
 
@@ -590,14 +602,20 @@ Brak albo nieważny token to 401, a poprawna tożsamość bez uprawnień to 403.
 
 Identyfikator z adresu nigdy nie jest jedynym warunkiem. Serwer zawsze porównuje właściciela zasobu z tożsamością z tokenu, w jednym wspólnym miejscu kodu, a przy braku zgodności odpowiada tak, jakby zasób nie istniał. Szczegóły opisuje punkt o weryfikacji własności zasobu.
 
-## Kwestie do uzgodnienia
+## Rozstrzygnięcia i kwestie otwarte
 
-1. **Operacje wewnętrzne nie są zaimplementowane.** Trzeba zdecydować, czy są potrzebne na pokaz, czy wystarczy obecny licznik w serwerze i polecenie kopii.
-2. **403 zamiast 401 przy zapisie bez sesji.** Żądanie zapisu bez sesji i bez klucza dostaje dziś 403 `CSRF_INVALID`, bo token CSRF jest sprawdzany przed logowaniem. Partner, który zapomni o kluczu, zobaczy więc błąd CSRF. Proponujemy zwracać 401 `AUTH_REQUIRED`, gdy żądanie nie ma ani sesji, ani klucza.
-3. **Dwa kody dla złego klucza.** Pusty klucz daje `API_KEY_INVALID`, a błędny `INVALID_API_KEY`. Warto zostawić jeden.
-4. **Rezerwacja założona przez recepcję** należy do konta pracownika. Klient, dla którego ją założono, nie zobaczy jej na swoim koncie. Do rozstrzygnięcia: czy recepcja ma wskazywać konto klienta.
-5. **Klucze partnerów nie mają terminu ważności.** Wymiana jest ręczna. Do rozważenia data wygaśnięcia.
-6. **Limit żądań liczymy na adres IP,** a nie na klucz. Kilku partnerów za jednym adresem dzieli wspólny limit.
-7. **Uprawnienie do vouchera jest związane z oznaczeniem `D`** zapisanym w kodzie. Osobny zakres, np. `vouchers:bind`, byłby czytelniejszy.
-8. **Kontrakty z A, B i D nie są potwierdzone** przez pozostałe grupy. Dotyczy to także zakresów, które dostanie klucz projektu D.
-9. **Klasyfikacja integracji.** Operacje dla serwera D zaliczyliśmy do zewnętrznych z tokenem, bo D jest partnerem integracyjnym. Jeśli prowadzący traktuje cztery projekty jako jeden system, te same operacje należałoby przenieść do grupy wewnętrznej.
+Po przeglądzie projektu rozstrzygnęliśmy i wdrożyliśmy kwestie, które wcześniej były otwarte:
+
+- **Operacje wewnętrzne** są zaimplementowane (W-01–W-05) razem z wydawaniem tokenów usług i poleceniami dla crona.
+- **Zapis bez sesji i bez klucza** dostaje 401 `AUTH_REQUIRED` zamiast mylącego 403 `CSRF_INVALID`. Partner, który zapomni o kluczu, od razu wie, co jest nie tak.
+- **Jeden kod dla złego klucza**: pusty, błędny i wyłączony klucz dają 401 `INVALID_API_KEY`.
+- **Brak projektu D w grupie.** Połączenie z D działa w trybie demo. Administrator może je wyłączyć: wtedy formularz rezerwacji nie pokazuje pól vouchera (ZP-08 podaje, które połączenia działają), a pozostałe funkcje hotelu działają bez zmian. Wyłączenia nie da się wykonać, dopóki są pobyty z voucherem przed rozliczeniem (409 `PARTNER_IN_USE`), więc żaden pobyt nie zostaje bez możliwości zamknięcia.
+
+Świadomie zostawiamy bez zmian:
+
+- **Rezerwacja założona przez recepcję** należy do konta pracownika. Gość nie musi mieć konta; recepcja zarządza taką rezerwacją w jego imieniu.
+- **Klucze partnerów nie wygasają.** Administrator wyłącza je i wymienia ręcznie; wyłączenie działa od następnego żądania.
+- **Limit żądań liczymy na adres IP.** Za serwerem pośredniczącym działa poprawnie dzięki ustawieniu `TRUST_PROXY`.
+- **Prawo do vouchera ma partner oznaczony `D`.** Oznaczenie partnera ustala administrator przy tworzeniu klucza.
+
+Do uzgodnienia z innymi grupami zostają szczegóły kontraktów A i B (adresy testowe, klucze, termin wspólnej próby) opisane w `docs/api/integracje.md`. Kontrakt D czeka, aż ktoś podejmie się tego projektu.

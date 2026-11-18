@@ -1,5 +1,5 @@
 import { DatabaseSync, backup } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 // BACKUP_DIR pozwala zapisać kopię na osobnym woluminie (tak robi obraz Dockera).
 const directory = process.env.BACKUP_DIR || 'backups';
@@ -13,6 +13,7 @@ const target = resolve(
 );
 try {
   await backup(source, target);
+  chmodSync(target, 0o600);
   console.log(`Zapisano kopię: ${target}`);
 } finally {
   source.close();

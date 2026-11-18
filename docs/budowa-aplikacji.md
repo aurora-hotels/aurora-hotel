@@ -10,6 +10,8 @@ Aplikacja ma interfejs React, serwer Express i bazę SQLite; obie części są n
 flowchart LR
     P[Przeglądarka<br/>React] -->|sesja + CSRF| API["/api/v1<br/>Express"]
     D[Projekt D<br/>serwer partnera] -->|klucz API| API
+    S[Usługi hotelu<br/>monitoring, harmonogram, kopia] -->|token usługi| INT["/internal/v1<br/>Express"]
+    INT --> L
     API --> L[Reguły hotelu]
     L --> DB[(SQLite)]
     L --> AD[Adaptery A/B/D]
@@ -34,6 +36,9 @@ Reguły, od których zależy zapis danych, są w serwerze. Formularze sprawdzaj�
 | `backend/src/integrations/adapters.ts`  | Wywołania A/B/D oraz symulator trybu demo                                    |
 | `backend/src/integrations/transport.ts` | Połączenie HTTP z partnerem: dozwolone hosty, limit czasu, brak przekierowań |
 | `backend/src/integrations/store.ts`     | Tabele integracji, szyfrowanie sekretów i sprawdzanie kluczy API             |
+| `backend/src/internal.ts`               | API usług wewnętrznych `/internal/v1` (W-01–W-05) i tokeny usług             |
+| `backend/src/service-tokens.ts`         | Polecenie `npm run service-token` do wydawania i wyłączania tokenów usług    |
+| `scripts/internal-jobs.mjs`             | Zadania dla crona: gotowość, wyjaśnianie operacji, porządkowanie, kopia      |
 | `backend/src/app.ts`, `server.ts`       | Kolejność warstw serwera, nagłówki bezpieczeństwa, start i zamknięcie        |
 | `frontend/src/api.ts`                   | Wywołania API z interfejsu i obsługa błędów                                  |
 | `frontend/src/pages/`                   | Ekrany i formularze                                                          |
@@ -87,6 +92,7 @@ erDiagram
 | `hotel_settings`                   | Nazwa hotelu, godziny przyjazdu i wyjazdu, strefa czasowa, waluta                                     |
 | `integrations`                     | Ustawienia połączeń z A, B i D: tryb, adres, limit czasu, zaszyfrowany sekret, wynik ostatniego testu |
 | `partnerKeys`                      | Klucze dostępu do API hotelu: oznaczenie partnera, skrót klucza, zakresy, aktywność                   |
+| `serviceTokens`                    | Tokeny usług wewnętrznych: rodzaj usługi, nazwa, skrót tokenu, stałe zakresy, aktywność               |
 | `partnerBookings`                  | Zamówienia usług A/B: termin, stan, identyfikator operacji i identyfikator nadany przez partnera      |
 | `partnerOperationRequests`         | Zaszyfrowana kopia wysłanego zamówienia, potrzebna do bezpiecznego ponowienia                         |
 | `integrationOperationTargets`      | Tryb i adres, pod którym rozpoczęto operację                                                          |
@@ -145,6 +151,18 @@ D potwierdza ważność i przypisanie hotelowej części vouchera. Brak odpowied
 
 Operacje zewnętrzne jednej rezerwacji wykonują się po kolei: blokada w pamięci procesu nie pozwala, żeby odświeżenie i anulowanie tej samej usługi nadpisały sobie wyniki.
 
+Niepewne operacje nie muszą czekać na recepcję. Harmonogram co kilka minut pobiera ich listę (W-02) i dla każdej pyta partnera o wynik (W-03), tak samo jak przycisk „Odśwież” w planie pobytu. Używa zapisanego `operationId` i tych samych blokad, więc nie zamawia niczego drugi raz.
+
+## Praca bez projektu D
+
+W naszej grupie nikt nie podjął się projektu D. Połączenie z D działa w trybie `demo`, z symulatorem w aplikacji, więc cały przebieg z voucherem można pokazać. Administrator może połączenie wyłączyć. Wtedy:
+
+- formularz rezerwacji nie pokazuje pól vouchera, bo interfejs sprawdza `GET /api/v1/features`;
+- serwer odrzuca rezerwację z voucherem (503 `PARTNER_DISABLED`);
+- rezerwacje bez vouchera, zameldowanie, wymeldowanie, usługi A/B i administracja działają bez zmian.
+
+Wyłączenia nie da się wykonać, dopóki istnieje pobyt z voucherem, który nie został jeszcze rozliczony w D (409 `PARTNER_IN_USE`). Tak samo chronione są połączenia z A i B, gdy mają aktywne lub niewyjaśnione usługi. Dzięki temu żaden pobyt nie zostaje bez możliwości zamknięcia.
+
 ## Bezpieczeństwo
 
 - Hasła są haszowane przez scrypt z losową solą. Logowanie na nieistniejące konto trwa tyle samo co na istniejące.
@@ -154,7 +172,8 @@ Operacje zewnętrzne jednej rezerwacji wykonują się po kolei: blokada w pamię
 - Klucze do partnerów i numery voucherów szyfrujemy AES-256-GCM kluczem `CONFIG_ENCRYPTION_KEY`. Odpowiedzi administracyjne zwracają tylko maskę.
 - Serwer sprawdza rolę, zakres klucza i właściciela rezerwacji. Odrzuca nieznane pola, żeby klient nie mógł sam zmienić statusu, właściciela ani źródła finansowania.
 - Historia operacji zawiera autora, czas i opis zmiany bez haseł oraz kluczy.
-- Wygasłe sesje i klucze ponowienia starsze niż 7 dni są usuwane przy starcie serwera i co godzinę.
+- Wygasłe sesje i klucze ponowienia starsze niż 7 dni są usuwane przy starcie serwera i co godzinę, a na żądanie harmonogramu także od razu (W-04).
+- Operacje wewnętrzne (`/internal/v1`) przyjmują wyłącznie tokeny usług `aurora_svc_…` ze stałym zakresem. Tokeny wydaje osoba z dostępem do serwera, nie administrator aplikacji. Na serwerze publicznym ścieżka `/internal` nie jest wystawiona do Internetu.
 
 ## Ograniczenia
 

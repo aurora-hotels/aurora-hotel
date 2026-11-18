@@ -2,7 +2,7 @@
 
 Przeznaczenie: szczegółowy opis każdej operacji z [katalogu endpointów](projekt-endpointow.md#katalog-endpointów): parametry, odpowiedzi, uprawnienia i błędy. Opiekunowie: Adrian Zieliński, Andrii Yaremko; uzgodnienie danych: Wiktoria Sobejko.
 
-Karty operacji ZT i ZP powstały z kontraktu [openapi.yaml](../openapi.yaml) i opisują działającą aplikację. Karty operacji W opisują projekt, który nie jest jeszcze zaimplementowany.
+Karty operacji ZT i ZP powstały z kontraktu [openapi.yaml](../openapi.yaml), a karty operacji W z kontraktu [openapi-internal.yaml](../openapi-internal.yaml). Wszystkie opisują działającą aplikację.
 
 Adres bazowy: `http://localhost:3001`. Wszystkie żądania i odpowiedzi z treścią używają JSON w UTF-8. Kwoty są w groszach, daty pobytu w formacie `RRRR-MM-DD`, a terminy usług w ISO 8601 ze strefą czasową.
 
@@ -10,38 +10,38 @@ Adres bazowy: `http://localhost:3001`. Wszystkie żądania i odpowiedzi z treśc
 
 Każdy błąd ma postać `{"error":{"code":"…","message":"…","fields":{}}}`. Poniższe błędy mogą wystąpić w wielu operacjach, dlatego karty tylko się do nich odwołują.
 
-| Kod HTTP | Kod błędu                            | Kiedy                                                                                                    |
-| -------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| 400      | `VALIDATION_ERROR`                   | Brak wymaganego pola, zły typ lub zakres wartości albo nieznane pole. `fields` wskazuje błędne pola.     |
-| 400      | `INVALID_JSON`                       | Treść żądania nie jest poprawnym JSON-em.                                                                |
-| 400      | `AMBIGUOUS_AUTH`                     | Żądanie zawiera jednocześnie `X-API-Key` i `Authorization`.                                              |
-| 401      | `AUTH_REQUIRED`                      | Operacja chroniona, a żądanie nie ma ważnej sesji ani klucza.                                            |
-| 401      | `INVALID_API_KEY`, `API_KEY_INVALID` | Klucz partnera jest błędny, wyłączony albo pusty.                                                        |
-| 401      | `INVALID_AUTHORIZATION`              | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                                 |
-| 403      | `CSRF_INVALID`, `ORIGIN_INVALID`     | Żądanie zapisu z przeglądarki bez zgodnego tokenu CSRF albo z obcej strony.                              |
-| 403      | `FORBIDDEN`                          | Tożsamość jest znana, ale jej rola nie pozwala na operację.                                              |
-| 403      | `SCOPE_REQUIRED`                     | Klucz partnera nie ma zakresu wymaganego przez operację.                                                 |
-| 403      | `USER_REQUIRED`                      | Operacja na własnym koncie wywołana kluczem partnera.                                                    |
-| 403      | `AMBIGUOUS_AUTH`                     | Żądanie zawiera jednocześnie sesję użytkownika i klucz partnera.                                         |
-| 403      | `PASSWORD_CHANGE_REQUIRED`           | Konto z hasłem tymczasowym próbuje wykonać cokolwiek poza zmianą hasła, odczytem profilu i wylogowaniem. |
-| 404      | `NOT_FOUND`                          | Nie ma takiej operacji API.                                                                              |
-| 413      | `PAYLOAD_TOO_LARGE`                  | Treść żądania większa niż 64 KB.                                                                         |
-| 429      | `RATE_LIMITED`                       | Przekroczony limit żądań z jednego adresu IP; nagłówek `Retry-After` podaje czas w sekundach.            |
-| 500      | `INTERNAL_ERROR`                     | Nieoczekiwany błąd serwera; odpowiedź nie zawiera szczegółów technicznych.                               |
-| 503      | `DATABASE_BUSY`                      | Baza jest chwilowo zajęta; nic nie zostało zapisane i żądanie można ponowić.                             |
+| Kod HTTP | Kod błędu                        | Kiedy                                                                                                                                           |
+| -------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400      | `VALIDATION_ERROR`               | Brak wymaganego pola, zły typ lub zakres wartości albo nieznane pole. `fields` wskazuje błędne pola.                                            |
+| 400      | `INVALID_JSON`                   | Treść żądania nie jest poprawnym JSON-em.                                                                                                       |
+| 400      | `AMBIGUOUS_AUTH`                 | Żądanie zawiera jednocześnie `X-API-Key` i `Authorization`.                                                                                     |
+| 401      | `AUTH_REQUIRED`                  | Operacja chroniona, a żądanie nie ma ważnej sesji ani klucza.                                                                                   |
+| 401      | `INVALID_API_KEY`                | Klucz partnera albo token usługi jest pusty, błędny lub wyłączony.                                                                              |
+| 401      | `INVALID_AUTHORIZATION`          | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                                                                        |
+| 403      | `CSRF_INVALID`, `ORIGIN_INVALID` | Żądanie zapisu z sesją przeglądarki bez zgodnego tokenu CSRF albo z obcej strony. Zapis bez sesji, tokenu i klucza dostaje 401 `AUTH_REQUIRED`. |
+| 403      | `FORBIDDEN`                      | Tożsamość jest znana, ale jej rola nie pozwala na operację.                                                                                     |
+| 403      | `SCOPE_REQUIRED`                 | Klucz partnera nie ma zakresu wymaganego przez operację.                                                                                        |
+| 403      | `USER_REQUIRED`                  | Operacja na własnym koncie wywołana kluczem partnera.                                                                                           |
+| 403      | `AMBIGUOUS_AUTH`                 | Żądanie zawiera jednocześnie sesję użytkownika i klucz partnera.                                                                                |
+| 403      | `PASSWORD_CHANGE_REQUIRED`       | Konto z hasłem tymczasowym próbuje wykonać cokolwiek poza zmianą hasła, odczytem profilu i wylogowaniem.                                        |
+| 404      | `NOT_FOUND`                      | Nie ma takiej operacji API.                                                                                                                     |
+| 413      | `PAYLOAD_TOO_LARGE`              | Treść żądania większa niż 64 KB.                                                                                                                |
+| 429      | `RATE_LIMITED`                   | Przekroczony limit żądań z jednego adresu IP; nagłówek `Retry-After` podaje czas w sekundach.                                                   |
+| 500      | `INTERNAL_ERROR`                 | Nieoczekiwany błąd serwera; odpowiedź nie zawiera szczegółów technicznych.                                                                      |
+| 503      | `DATABASE_BUSY`                  | Baza jest chwilowo zajęta; nic nie zostało zapisane i żądanie można ponowić.                                                                    |
 
-## Wewnętrzne wymagające tokenu (projekt)
+## Wewnętrzne wymagające tokenu
 
 ### W-01 — Sprawdź gotowość serwera i połączeń
 
-| Element                        | Opis                                                                                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Grupa                          | W — wewnętrzny z tokenem; projekt, operacja niezaimplementowana                                                                      |
-| Metoda i ścieżka               | `GET /internal/v1/health/ready`                                                                                                      |
-| Cel operacji i odbiorca        | Szczegółowa gotowość: baza danych oraz stan połączeń z A, B i D. Odbiorca: usługa monitoringu.                                       |
-| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>`; reprezentuje konto techniczne „Monitoring”.                                                  |
-| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Monitoring” z zakresem `health:read`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu. |
-| Ograniczenia dostępu do zasobu | Tylko stan techniczny; żadnych danych gości, rezerwacji ani sekretów.                                                                |
+| Element                        | Opis                                                                                                                                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Grupa                          | W — wewnętrzny z tokenem                                                                                                                                                                  |
+| Metoda i ścieżka               | `GET /internal/v1/health/ready`                                                                                                                                                           |
+| Cel operacji i odbiorca        | Szczegółowa gotowość: baza danych oraz stan połączeń z A, B i D. Odbiorca: usługa monitoringu (polecenie `npm run jobs -- ready`).                                                        |
+| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>` albo `X-API-Key`; reprezentuje konto techniczne „Monitoring”.                                                                                      |
+| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Monitoring” z zakresem `health:read`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                                                      |
+| Ograniczenia dostępu do zasobu | Tylko stan techniczny; żadnych danych gości, rezerwacji ani sekretów. Stan `degraded` oznacza, że ostatni test włączonego połączenia się nie udał; wyłączone połączenie nie obniża stanu. |
 
 Parametry i dane wejściowe:
 
@@ -53,24 +53,26 @@ Odpowiedź poprawna: 200 — `status` (string: `ok` albo `degraded`), `database`
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu              | Warunek wystąpienia                                                                   |
-| -------- | ---------------------- | ------------------------------------------------------------------------------------- |
-| 401      | `AUTH_REQUIRED`        | Brak nagłówka `Authorization`.                                                        |
-| 401      | `INVALID_API_KEY`      | Token usługi jest błędny, wyłączony albo jest kluczem partnera lub sesją użytkownika. |
-| 403      | `SCOPE_REQUIRED`       | Token usługi nie ma zakresu `health:read`.                                            |
-| 503      | `DATABASE_UNAVAILABLE` | Baza danych nie odpowiada.                                                            |
-| —        | błędy wspólne          | 429 `RATE_LIMITED`                                                                    |
+| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                                     |
+| -------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| 400      | `AMBIGUOUS_AUTH`        | Podano jednocześnie `Authorization` i `X-API-Key`.                                      |
+| 401      | `AUTH_REQUIRED`         | Brak nagłówka `Authorization` i `X-API-Key`; sesja użytkownika nie jest tu przyjmowana. |
+| 401      | `INVALID_API_KEY`       | Token usługi jest pusty, błędny, wyłączony albo jest kluczem partnera.                  |
+| 401      | `INVALID_AUTHORIZATION` | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                |
+| 403      | `SCOPE_REQUIRED`        | Token usługi nie ma zakresu `health:read`.                                              |
+| 503      | `DATABASE_UNAVAILABLE`  | Baza danych nie odpowiada.                                                              |
+| —        | błędy wspólne           | 429 `RATE_LIMITED`                                                                      |
 
 ### W-02 — Pokaż operacje partnerów do wyjaśnienia
 
-| Element                        | Opis                                                                                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Grupa                          | W — wewnętrzny z tokenem; projekt, operacja niezaimplementowana                                                                          |
-| Metoda i ścieżka               | `GET /internal/v1/operations/pending`                                                                                                    |
-| Cel operacji i odbiorca        | Lista operacji A/B/D o niepewnym wyniku, żeby monitoring mógł zgłosić je recepcji. Odbiorca: usługa monitoringu.                         |
-| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>`; reprezentuje konto techniczne „Monitoring”.                                                      |
-| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Monitoring” z zakresem `operations:read`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu. |
-| Ograniczenia dostępu do zasobu | Zwraca wyłącznie identyfikatory i stany operacji; bez nazwisk gości, numerów voucherów i treści żądań.                                   |
+| Element                        | Opis                                                                                                                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Grupa                          | W — wewnętrzny z tokenem                                                                                                                                                    |
+| Metoda i ścieżka               | `GET /internal/v1/operations/pending`                                                                                                                                       |
+| Cel operacji i odbiorca        | Lista operacji A/B/D o niepewnym wyniku: monitoring zgłasza je recepcji, a harmonogram wybiera z niej operacje do wyjaśnienia. Odbiorca: usługi monitoringu i harmonogramu. |
+| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>` albo `X-API-Key`; reprezentuje konto techniczne „Monitoring” lub „Harmonogram”.                                                      |
+| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Monitoring” lub „Harmonogram” z zakresem `operations:read`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                  |
+| Ograniczenia dostępu do zasobu | Zwraca wyłącznie identyfikatory i stany operacji; bez nazwisk gości, numerów voucherów i treści żądań.                                                                      |
 
 Parametry i dane wejściowe:
 
@@ -81,62 +83,65 @@ Parametry i dane wejściowe:
 
 Treść żądania: Brak treści.
 
-Odpowiedź poprawna: 200 — `{items,total,page,pageSize}`; element: `operationId` (string), `partner` (`A`/`B`/`D`), `kind` (`booking`/`cancellation`/`voucher_completion`), `status` (`pending`/`unknown`/`cancel_pending`), `reservationId` (string), `updatedAt` (data i czas).
+Odpowiedź poprawna: 200 — `{items,total,page,pageSize}`; element: `operationId` (string), `partner` (`A`/`B`/`D`), `kind` (`booking`/`cancellation`/`voucher_completion`), `status` (`pending`/`unknown`/`cancel_pending`), `reservationId` (string), `updatedAt` (data i czas). Kolejność: od najdawniej zmienionej.
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu          | Warunek wystąpienia                                                                   |
-| -------- | ------------------ | ------------------------------------------------------------------------------------- |
-| 401      | `AUTH_REQUIRED`    | Brak nagłówka `Authorization`.                                                        |
-| 401      | `INVALID_API_KEY`  | Token usługi jest błędny, wyłączony albo jest kluczem partnera lub sesją użytkownika. |
-| 403      | `SCOPE_REQUIRED`   | Token usługi nie ma zakresu `operations:read`.                                        |
-| 400      | `VALIDATION_ERROR` | Nieznany partner albo `pageSize` poza zakresem.                                       |
-| —        | błędy wspólne      | 429 `RATE_LIMITED`                                                                    |
+| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                                     |
+| -------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| 400      | `AMBIGUOUS_AUTH`        | Podano jednocześnie `Authorization` i `X-API-Key`.                                      |
+| 400      | `VALIDATION_ERROR`      | Nieznany partner albo `page`/`pageSize` poza zakresem.                                  |
+| 401      | `AUTH_REQUIRED`         | Brak nagłówka `Authorization` i `X-API-Key`; sesja użytkownika nie jest tu przyjmowana. |
+| 401      | `INVALID_API_KEY`       | Token usługi jest pusty, błędny, wyłączony albo jest kluczem partnera.                  |
+| 401      | `INVALID_AUTHORIZATION` | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                |
+| 403      | `SCOPE_REQUIRED`        | Token usługi nie ma zakresu `operations:read`.                                          |
+| —        | błędy wspólne           | 429 `RATE_LIMITED`                                                                      |
 
 ### W-03 — Ustal wynik niepewnej operacji
 
-| Element                        | Opis                                                                                                                                                                                          |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Grupa                          | W — wewnętrzny z tokenem; projekt, operacja niezaimplementowana                                                                                                                               |
-| Metoda i ścieżka               | `POST /internal/v1/operations/{operationId}/reconcile`                                                                                                                                        |
-| Cel operacji i odbiorca        | Ponowne zapytanie partnera o wynik jednej niepewnej operacji, tak jak robi to recepcja przyciskiem „Odśwież”. Odbiorca: usługa harmonogramu.                                                  |
-| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>`; reprezentuje konto techniczne „Harmonogram”.                                                                                                          |
-| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Harmonogram” z zakresem `operations:reconcile`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                                                |
-| Ograniczenia dostępu do zasobu | Tylko operacje w stanie `pending`, `unknown` lub `cancel_pending`. Nie tworzy nowych zamówień: używa zapisanego `operationId` i trafia wyłącznie do środowiska, w którym operację rozpoczęto. |
+| Element                        | Opis                                                                                                                                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Grupa                          | W — wewnętrzny z tokenem                                                                                                                                                                                                                   |
+| Metoda i ścieżka               | `POST /internal/v1/operations/{operationId}/reconcile`                                                                                                                                                                                     |
+| Cel operacji i odbiorca        | Ponowne zapytanie partnera o wynik jednej niepewnej operacji, tak jak robi to recepcja przyciskiem „Odśwież”. Odbiorca: usługa harmonogramu (polecenie `npm run jobs -- reconcile`).                                                       |
+| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>` albo `X-API-Key`; reprezentuje konto techniczne „Harmonogram”.                                                                                                                                      |
+| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Harmonogram” z zakresem `operations:reconcile`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                                                                                             |
+| Ograniczenia dostępu do zasobu | Tylko operacje w stanie `pending`, `unknown` lub `cancel_pending`. Nie tworzy nowych zamówień: używa zapisanego `operationId` i trafia wyłącznie do środowiska, w którym operację rozpoczęto. Każde wywołanie trafia do historii operacji. |
 
 Parametry i dane wejściowe:
 
-| Nazwa i miejsce         | Typ i wymagalność | Opis i reguły walidacji                                    |
-| ----------------------- | ----------------- | ---------------------------------------------------------- |
-| `operationId` (ścieżka) | string; tak       | Identyfikator operacji zapisany przez hotel, 1–100 znaków. |
+| Nazwa i miejsce         | Typ i wymagalność | Opis i reguły walidacji                                                                                       |
+| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| `operationId` (ścieżka) | string; tak       | Identyfikator operacji zapisany przez hotel (rezerwacji, anulowania albo rozliczenia vouchera), 1–100 znaków. |
 
 Treść żądania: Brak treści.
 
-Odpowiedź poprawna: 200 — `operationId` (string), `partner` (string), `status` (nowy stan, np. `confirmed`, `cancelled`, `reported` albo nadal `unknown`), `changed` (boolean).
+Odpowiedź poprawna: 200 — `operationId` (string), `partner` (`A`/`B`/`D`), `status` (stan po zapytaniu, np. `confirmed`, `cancelled`, `reported` albo nadal `unknown`), `changed` (boolean), `error` (string lub null: ostatni błąd partnera, gdy wynik nadal jest niepewny).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                | Warunek wystąpienia                                                                   |
-| -------- | ---------------------------------------- | ------------------------------------------------------------------------------------- |
-| 401      | `AUTH_REQUIRED`                          | Brak nagłówka `Authorization`.                                                        |
-| 401      | `INVALID_API_KEY`                        | Token usługi jest błędny, wyłączony albo jest kluczem partnera lub sesją użytkownika. |
-| 403      | `SCOPE_REQUIRED`                         | Token usługi nie ma zakresu `operations:reconcile`.                                   |
-| 404      | `OPERATION_NOT_FOUND`                    | Operacja nie istnieje.                                                                |
-| 409      | `OPERATION_SETTLED`                      | Operacja ma już ostateczny wynik.                                                     |
-| 409      | `PARTNER_TARGET_CHANGED`                 | Od rozpoczęcia operacji zmieniono tryb lub adres partnera.                            |
-| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT` | Partner nadal nie odpowiada; stan pozostaje bez zmian.                                |
-| —        | błędy wspólne                            | 429 `RATE_LIMITED`                                                                    |
+| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                                     |
+| -------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| 400      | `AMBIGUOUS_AUTH`        | Podano jednocześnie `Authorization` i `X-API-Key`.                                      |
+| 401      | `AUTH_REQUIRED`         | Brak nagłówka `Authorization` i `X-API-Key`; sesja użytkownika nie jest tu przyjmowana. |
+| 401      | `INVALID_API_KEY`       | Token usługi jest pusty, błędny, wyłączony albo jest kluczem partnera.                  |
+| 401      | `INVALID_AUTHORIZATION` | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                |
+| 403      | `SCOPE_REQUIRED`        | Token usługi nie ma zakresu `operations:reconcile`.                                     |
+| 404      | `OPERATION_NOT_FOUND`   | Operacja nie istnieje.                                                                  |
+| 409      | `OPERATION_SETTLED`     | Operacja ma już ostateczny wynik.                                                       |
+| 409      | `RESERVATION_BUSY`      | Recepcja wykonuje w tej chwili inną operację na tym pobycie; można ponowić później.     |
+| —        | błędy wspólne           | 429 `RATE_LIMITED`                                                                      |
 
 ### W-04 — Usuń wygasłe sesje i stare klucze ponowienia
 
-| Element                        | Opis                                                                                                                                      |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Grupa                          | W — wewnętrzny z tokenem; projekt, operacja niezaimplementowana                                                                           |
-| Metoda i ścieżka               | `POST /internal/v1/maintenance/cleanup`                                                                                                   |
-| Cel operacji i odbiorca        | Porządkowanie bazy: wygasłe sesje i klucze ponowienia starsze niż 7 dni. Odbiorca: usługa harmonogramu.                                   |
-| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>`; reprezentuje konto techniczne „Harmonogram”.                                                      |
-| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Harmonogram” z zakresem `maintenance:run`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu. |
-| Ograniczenia dostępu do zasobu | Usuwa wyłącznie dane techniczne. Nie dotyka rezerwacji, kont ani historii operacji.                                                       |
+| Element                        | Opis                                                                                                                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Grupa                          | W — wewnętrzny z tokenem                                                                                                                                                             |
+| Metoda i ścieżka               | `POST /internal/v1/maintenance/cleanup`                                                                                                                                              |
+| Cel operacji i odbiorca        | Porządkowanie bazy: wygasłe sesje i klucze ponowienia starsze niż 7 dni. Serwer robi to także sam co godzinę; wywołanie pozwala uruchomić je od razu. Odbiorca: usługa harmonogramu. |
+| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>` albo `X-API-Key`; reprezentuje konto techniczne „Harmonogram”.                                                                                |
+| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Harmonogram” z zakresem `maintenance:run`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                                            |
+| Ograniczenia dostępu do zasobu | Usuwa wyłącznie dane techniczne. Nie dotyka rezerwacji, kont ani historii operacji.                                                                                                  |
 
 Parametry i dane wejściowe:
 
@@ -148,24 +153,26 @@ Odpowiedź poprawna: 200 — `sessionsRemoved` (integer), `idempotencyRecordsRem
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu         | Warunek wystąpienia                                                                   |
-| -------- | ----------------- | ------------------------------------------------------------------------------------- |
-| 401      | `AUTH_REQUIRED`   | Brak nagłówka `Authorization`.                                                        |
-| 401      | `INVALID_API_KEY` | Token usługi jest błędny, wyłączony albo jest kluczem partnera lub sesją użytkownika. |
-| 403      | `SCOPE_REQUIRED`  | Token usługi nie ma zakresu `maintenance:run`.                                        |
-| 503      | `DATABASE_BUSY`   | Baza jest chwilowo zajęta; operację można ponowić.                                    |
-| —        | błędy wspólne     | 429 `RATE_LIMITED`                                                                    |
+| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                                     |
+| -------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| 400      | `AMBIGUOUS_AUTH`        | Podano jednocześnie `Authorization` i `X-API-Key`.                                      |
+| 401      | `AUTH_REQUIRED`         | Brak nagłówka `Authorization` i `X-API-Key`; sesja użytkownika nie jest tu przyjmowana. |
+| 401      | `INVALID_API_KEY`       | Token usługi jest pusty, błędny, wyłączony albo jest kluczem partnera.                  |
+| 401      | `INVALID_AUTHORIZATION` | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                |
+| 403      | `SCOPE_REQUIRED`        | Token usługi nie ma zakresu `maintenance:run`.                                          |
+| 503      | `DATABASE_BUSY`         | Baza jest chwilowo zajęta; operację można ponowić.                                      |
+| —        | błędy wspólne           | 429 `RATE_LIMITED`                                                                      |
 
 ### W-05 — Utwórz spójną kopię bazy
 
-| Element                        | Opis                                                                                                                                                           |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Grupa                          | W — wewnętrzny z tokenem; projekt, operacja niezaimplementowana                                                                                                |
-| Metoda i ścieżka               | `POST /internal/v1/backups`                                                                                                                                    |
-| Cel operacji i odbiorca        | Kopia bazy SQLite wykonana mechanizmem kopii zapasowej. Odbiorca: usługa kopii zapasowych.                                                                     |
-| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>`; reprezentuje konto techniczne „Kopia zapasowa”.                                                                        |
-| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Kopia zapasowa” z zakresem `backups:create`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                    |
-| Ograniczenia dostępu do zasobu | Kopia powstaje w katalogu `BACKUP_DIR` na serwerze; odpowiedź zawiera tylko nazwę pliku, nigdy jego treść. Usługa nie może kopii pobrać, odtworzyć ani usunąć. |
+| Element                        | Opis                                                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Grupa                          | W — wewnętrzny z tokenem                                                                                                                                          |
+| Metoda i ścieżka               | `POST /internal/v1/backups`                                                                                                                                       |
+| Cel operacji i odbiorca        | Kopia bazy SQLite wykonana mechanizmem kopii zapasowej SQLite, bez zatrzymywania serwera. Odbiorca: usługa kopii zapasowych (polecenie `npm run jobs -- backup`). |
+| Wymagany token i tożsamość     | `Authorization: Bearer <token usługi>` albo `X-API-Key`; reprezentuje konto techniczne „Kopia zapasowa”.                                                          |
+| Dozwolone role lub uprawnienia | Wyłącznie konto techniczne „Kopia zapasowa” z zakresem `backups:create`. Użytkownicy, także administrator, oraz partnerzy nie mają dostępu.                       |
+| Ograniczenia dostępu do zasobu | Kopia powstaje w katalogu `BACKUP_DIR` na serwerze; odpowiedź zawiera tylko nazwę pliku, nigdy jego treść. Usługa nie może kopii pobrać, odtworzyć ani usunąć.    |
 
 Parametry i dane wejściowe:
 
@@ -177,13 +184,16 @@ Odpowiedź poprawna: 201 — `file` (string, nazwa pliku), `sizeBytes` (integer)
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu         | Warunek wystąpienia                                                                   |
-| -------- | ----------------- | ------------------------------------------------------------------------------------- |
-| 401      | `AUTH_REQUIRED`   | Brak nagłówka `Authorization`.                                                        |
-| 401      | `INVALID_API_KEY` | Token usługi jest błędny, wyłączony albo jest kluczem partnera lub sesją użytkownika. |
-| 403      | `SCOPE_REQUIRED`  | Token usługi nie ma zakresu `backups:create`.                                         |
-| 503      | `BACKUP_FAILED`   | Nie udało się zapisać kopii, np. brak miejsca.                                        |
-| —        | błędy wspólne     | 429 `RATE_LIMITED`                                                                    |
+| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                                     |
+| -------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| 400      | `AMBIGUOUS_AUTH`        | Podano jednocześnie `Authorization` i `X-API-Key`.                                      |
+| 401      | `AUTH_REQUIRED`         | Brak nagłówka `Authorization` i `X-API-Key`; sesja użytkownika nie jest tu przyjmowana. |
+| 401      | `INVALID_API_KEY`       | Token usługi jest pusty, błędny, wyłączony albo jest kluczem partnera.                  |
+| 401      | `INVALID_AUTHORIZATION` | Nagłówek `Authorization` w schemacie innym niż `Bearer`.                                |
+| 403      | `SCOPE_REQUIRED`        | Token usługi nie ma zakresu `backups:create`.                                           |
+| 409      | `BACKUP_IN_PROGRESS`    | Poprzednia kopia jeszcze się tworzy.                                                    |
+| 503      | `BACKUP_FAILED`         | Nie udało się zapisać kopii, np. brak miejsca.                                          |
+| —        | błędy wspólne           | 429 `RATE_LIMITED`                                                                      |
 
 ## Zewnętrzne wymagające tokenu
 
@@ -208,10 +218,11 @@ Odpowiedź poprawna: 204 — bez treści.
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu      | Warunek wystąpienia                   |
-| -------- | -------------- | ------------------------------------- |
-| 403      | `CSRF_INVALID` | Brak sesji albo niezgodny token CSRF. |
-| —        | błędy wspólne  | 429 `RATE_LIMITED`                    |
+| Kod HTTP | Kod błędu       | Warunek wystąpienia                                          |
+| -------- | --------------- | ------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED` | Brak cookie sesji i tokenu CSRF.                             |
+| 403      | `CSRF_INVALID`  | Jest cookie sesji, ale brak tokenu CSRF albo jest niezgodny. |
+| —        | błędy wspólne   | 429 `RATE_LIMITED`                                           |
 
 ### ZT-02 — Pobierz swój profil
 
@@ -268,8 +279,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu           | Warunek wystąpienia                                                                                                     |
 | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`      | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`     | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`     | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`      | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 400      | `PASSWORD_REQUIRED` | Zmiana adresu e-mail bez pola `currentPassword`.                                                                        |
 | 400      | `PASSWORD_INVALID`  | Podane obecne hasło jest niepoprawne.                                                                                   |
 | 409      | `EMAIL_TAKEN`       | Nowy adres e-mail należy do innego konta.                                                                               |
@@ -303,8 +314,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu            | Warunek wystąpienia                                                                     |
 | -------- | -------------------- | --------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`       | Brak ważnej sesji albo niezgodny token CSRF.                                            |
-| 401      | `AUTH_REQUIRED`      | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                |
+| 401      | `AUTH_REQUIRED`      | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.    |
+| 403      | `CSRF_INVALID`       | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                  |
 | 400      | `PASSWORD_INVALID`   | Obecne hasło jest niepoprawne.                                                          |
 | 400      | `PASSWORD_UNCHANGED` | Nowe hasło jest takie samo jak dotychczasowe.                                           |
 | 403      | `USER_REQUIRED`      | Żądanie z kluczem partnera.                                                             |
@@ -347,8 +358,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu                                                                              | Warunek wystąpienia                                                                                                                              |
 | -------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 403      | `CSRF_INVALID`                                                                         | Żądanie z przeglądarki bez ważnej sesji i zgodnego tokenu CSRF. Nie dotyczy żądań z kluczem partnera.                                            |
-| 401      | `AUTH_REQUIRED`                                                                        | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                                         |
+| 401      | `AUTH_REQUIRED`                                                                        | Brak cookie sesji, tokenu CSRF i klucza albo sesja jest anonimowa: nikt nie jest zalogowany.                                                     |
+| 403      | `CSRF_INVALID`                                                                         | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF. Nie dotyczy żądań z kluczem partnera.                                                     |
 | 401      | `INVALID_API_KEY`                                                                      | Klucz partnera jest błędny albo wyłączony.                                                                                                       |
 | 403      | `SCOPE_REQUIRED`                                                                       | Klucz partnera nie ma zakresu `reservations:create`.                                                                                             |
 | 409      | `ROOM_UNAVAILABLE`                                                                     | Pokój jest zajęty w wybranym terminie.                                                                                                           |
@@ -460,8 +471,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu                                     | Warunek wystąpienia                                                                                                     |
 | -------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                                | Żądanie z przeglądarki bez ważnej sesji i zgodnego tokenu CSRF. Nie dotyczy żądań z kluczem partnera.                   |
-| 401      | `AUTH_REQUIRED`                               | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`                               | Brak cookie sesji, tokenu CSRF i klucza albo sesja jest anonimowa: nikt nie jest zalogowany.                            |
+| 403      | `CSRF_INVALID`                                | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF. Nie dotyczy żądań z kluczem partnera.                            |
 | 401      | `INVALID_API_KEY`                             | Klucz partnera jest błędny albo wyłączony.                                                                              |
 | 403      | `SCOPE_REQUIRED`                              | Klucz partnera nie ma zakresu `reservations:update`.                                                                    |
 | 404      | `RESERVATION_NOT_FOUND`                       | Rezerwacja nie istnieje albo należy do kogoś innego.                                                                    |
@@ -500,20 +511,20 @@ Odpowiedź poprawna: 200 — obiekt [Reservation](#reservation).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                | Warunek wystąpienia                                                                                   |
-| -------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                           | Żądanie z przeglądarki bez ważnej sesji i zgodnego tokenu CSRF. Nie dotyczy żądań z kluczem partnera. |
-| 401      | `AUTH_REQUIRED`                          | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                              |
-| 401      | `INVALID_API_KEY`                        | Klucz partnera jest błędny albo wyłączony.                                                            |
-| 403      | `SCOPE_REQUIRED`                         | Klucz partnera nie ma zakresu `reservations:cancel`.                                                  |
-| 404      | `RESERVATION_NOT_FOUND`                  | Rezerwacja nie istnieje albo należy do kogoś innego.                                                  |
-| 409      | `INVALID_STATUS`                         | Pobyt jest już zameldowany albo zakończony.                                                           |
-| 409      | `ARRIVAL_STARTED`                        | Klient lub partner próbuje anulować w dniu przyjazdu albo później.                                    |
-| 409      | `EXTERNAL_CANCELLATION_PENDING`          | Nie udało się anulować wszystkich usług A/B; pobyt pozostaje aktywny.                                 |
-| 409      | `VERSION_CONFLICT`                       | Pobyt zmienił się w trakcie anulowania; trzeba odświeżyć dane.                                        |
-| 409      | `VOUCHER_INVALID`, `VOUCHER_USED`        | D nie potwierdził vouchera albo jego hotelowa część została już wykorzystana.                         |
-| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT` | D nie odpowiada przy pobycie z voucherem; pobyt pozostaje aktywny.                                    |
-| —        | błędy wspólne                            | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`                            |
+| Kod HTTP | Kod błędu                                | Warunek wystąpienia                                                                          |
+| -------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 401      | `AUTH_REQUIRED`                          | Brak cookie sesji, tokenu CSRF i klucza albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`                           | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF. Nie dotyczy żądań z kluczem partnera. |
+| 401      | `INVALID_API_KEY`                        | Klucz partnera jest błędny albo wyłączony.                                                   |
+| 403      | `SCOPE_REQUIRED`                         | Klucz partnera nie ma zakresu `reservations:cancel`.                                         |
+| 404      | `RESERVATION_NOT_FOUND`                  | Rezerwacja nie istnieje albo należy do kogoś innego.                                         |
+| 409      | `INVALID_STATUS`                         | Pobyt jest już zameldowany albo zakończony.                                                  |
+| 409      | `ARRIVAL_STARTED`                        | Klient lub partner próbuje anulować w dniu przyjazdu albo później.                           |
+| 409      | `EXTERNAL_CANCELLATION_PENDING`          | Nie udało się anulować wszystkich usług A/B; pobyt pozostaje aktywny.                        |
+| 409      | `VERSION_CONFLICT`                       | Pobyt zmienił się w trakcie anulowania; trzeba odświeżyć dane.                               |
+| 409      | `VOUCHER_INVALID`, `VOUCHER_USED`        | D nie potwierdził vouchera albo jego hotelowa część została już wykorzystana.                |
+| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT` | D nie odpowiada przy pobycie z voucherem; pobyt pozostaje aktywny.                           |
+| —        | błędy wspólne                            | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`                   |
 
 ### ZT-10 — Pokaż usługi w planie pobytu
 
@@ -569,17 +580,17 @@ Odpowiedź poprawna: 200 — obiekt [Reservation](#reservation).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                                     | Warunek wystąpienia                                                        |
-| -------- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                                                | Brak ważnej sesji albo niezgodny token CSRF.                               |
-| 401      | `AUTH_REQUIRED`                                               | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.   |
-| 403      | `FORBIDDEN`                                                   | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.       |
-| 404      | `RESERVATION_NOT_FOUND`                                       | Rezerwacja nie istnieje.                                                   |
-| 409      | `INVALID_STATUS`                                              | Rezerwacja nie jest w stanie „potwierdzona”.                               |
-| 409      | `CHECK_IN_TOO_EARLY`                                          | Dzień przyjazdu jeszcze nie nadszedł.                                      |
-| 409      | `VOUCHER_INVALID`, `VOUCHER_USED`, `VOUCHER_OUTSIDE_VALIDITY` | D nie potwierdził hotelowej części vouchera.                               |
-| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT`                      | D nie odpowiada: pobytu z voucherem nie można zameldować.                  |
-| —        | błędy wspólne                                                 | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu                                                     | Warunek wystąpienia                                                                  |
+| -------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED`                                               | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`                                                | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                               |
+| 403      | `FORBIDDEN`                                                   | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                 |
+| 404      | `RESERVATION_NOT_FOUND`                                       | Rezerwacja nie istnieje.                                                             |
+| 409      | `INVALID_STATUS`                                              | Rezerwacja nie jest w stanie „potwierdzona”.                                         |
+| 409      | `CHECK_IN_TOO_EARLY`                                          | Dzień przyjazdu jeszcze nie nadszedł.                                                |
+| 409      | `VOUCHER_INVALID`, `VOUCHER_USED`, `VOUCHER_OUTSIDE_VALIDITY` | D nie potwierdził hotelowej części vouchera.                                         |
+| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT`                      | D nie odpowiada: pobytu z voucherem nie można zameldować.                            |
+| —        | błędy wspólne                                                 | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`           |
 
 ### ZT-12 — Zakończ pobyt i potwierdź nocleg w D
 
@@ -604,14 +615,14 @@ Odpowiedź poprawna: 200 — obiekt [CheckedOutReservation](#checkedoutreservati
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                        |
-| -------- | ----------------------- | -------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`          | Brak ważnej sesji albo niezgodny token CSRF.                               |
-| 401      | `AUTH_REQUIRED`         | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.   |
-| 403      | `FORBIDDEN`             | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.       |
-| 404      | `RESERVATION_NOT_FOUND` | Rezerwacja nie istnieje.                                                   |
-| 409      | `INVALID_STATUS`        | Goście nie zostali jeszcze zameldowani albo pobyt jest anulowany.          |
-| —        | błędy wspólne           | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu               | Warunek wystąpienia                                                                  |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED`         | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`          | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                               |
+| 403      | `FORBIDDEN`             | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                 |
+| 404      | `RESERVATION_NOT_FOUND` | Rezerwacja nie istnieje.                                                             |
+| 409      | `INVALID_STATUS`        | Goście nie zostali jeszcze zameldowani albo pobyt jest anulowany.                    |
+| —        | błędy wspólne           | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`           |
 
 ### ZT-13 — Popraw listę gości i dane kontaktowe
 
@@ -641,8 +652,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu                 | Warunek wystąpienia                                                                                                     |
 | -------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`            | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`           | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`           | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`            | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`               | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                                                    |
 | 404      | `RESERVATION_NOT_FOUND`   | Rezerwacja nie istnieje.                                                                                                |
 | 409      | `INVALID_STATUS`          | Pobyt jest zakończony albo anulowany.                                                                                   |
@@ -680,8 +691,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu                                 | Warunek wystąpienia                                                                                                     |
 | -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                            | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`                           | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`                           | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`                            | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`                               | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                                                    |
 | 404      | `RESERVATION_NOT_FOUND`, `ITEM_NOT_FOUND` | Rezerwacja albo usługa pakietu nie istnieje.                                                                            |
 | 409      | `PARTNER_STATUS_READ_ONLY`                | Próba ręcznej zmiany stanu usługi A/B.                                                                                  |
@@ -754,8 +765,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu                                 | Warunek wystąpienia                                                                                                     |
 | -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                            | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`                           | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`                           | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`                            | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`                               | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                                                    |
 | 404      | `RESERVATION_NOT_FOUND`, `ITEM_NOT_FOUND` | Rezerwacja albo usługa pakietu nie istnieje.                                                                            |
 | 409      | `RESERVATION_CLOSED`                      | Pobyt jest zakończony albo anulowany.                                                                                   |
@@ -790,14 +801,14 @@ Odpowiedź poprawna: 200 — obiekt [Booking](#booking).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                    | Warunek wystąpienia                                                        |
-| -------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                               | Brak ważnej sesji albo niezgodny token CSRF.                               |
-| 401      | `AUTH_REQUIRED`                              | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.   |
-| 403      | `FORBIDDEN`                                  | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.       |
-| 404      | `RESERVATION_NOT_FOUND`, `BOOKING_NOT_FOUND` | Rezerwacja albo zamówienie nie istnieje.                                   |
-| 409      | `PARTNER_TARGET_CHANGED`                     | Od rozpoczęcia operacji zmieniono tryb lub adres partnera.                 |
-| —        | błędy wspólne                                | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu                                    | Warunek wystąpienia                                                                  |
+| -------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED`                              | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`                               | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                               |
+| 403      | `FORBIDDEN`                                  | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                 |
+| 404      | `RESERVATION_NOT_FOUND`, `BOOKING_NOT_FOUND` | Rezerwacja albo zamówienie nie istnieje.                                             |
+| 409      | `PARTNER_TARGET_CHANGED`                     | Od rozpoczęcia operacji zmieniono tryb lub adres partnera.                           |
+| —        | błędy wspólne                                | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`           |
 
 ### ZT-18 — Anuluj usługę A/B
 
@@ -823,16 +834,16 @@ Odpowiedź poprawna: 200 — obiekt [Booking](#booking).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                    | Warunek wystąpienia                                                        |
-| -------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                               | Brak ważnej sesji albo niezgodny token CSRF.                               |
-| 401      | `AUTH_REQUIRED`                              | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.   |
-| 403      | `FORBIDDEN`                                  | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.       |
-| 404      | `RESERVATION_NOT_FOUND`, `BOOKING_NOT_FOUND` | Rezerwacja albo zamówienie nie istnieje.                                   |
-| 409      | `SERVICE_COMPLETED`                          | Partner potwierdził już wykonanie usługi.                                  |
-| 409      | `EXTERNAL_CANCELLATION_PENDING`              | Wynik zamówienia jest niepewny; najpierw trzeba go ustalić (ZT-17).        |
-| 409      | `PARTNER_TARGET_CHANGED`                     | Od rozpoczęcia operacji zmieniono tryb lub adres partnera.                 |
-| —        | błędy wspólne                                | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu                                    | Warunek wystąpienia                                                                  |
+| -------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED`                              | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`                               | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                               |
+| 403      | `FORBIDDEN`                                  | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                 |
+| 404      | `RESERVATION_NOT_FOUND`, `BOOKING_NOT_FOUND` | Rezerwacja albo zamówienie nie istnieje.                                             |
+| 409      | `SERVICE_COMPLETED`                          | Partner potwierdził już wykonanie usługi.                                            |
+| 409      | `EXTERNAL_CANCELLATION_PENDING`              | Wynik zamówienia jest niepewny; najpierw trzeba go ustalić (ZT-17).                  |
+| 409      | `PARTNER_TARGET_CHANGED`                     | Od rozpoczęcia operacji zmieniono tryb lub adres partnera.                           |
+| —        | błędy wspólne                                | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`           |
 
 ### ZT-19 — Sprawdź voucher pobytu w D
 
@@ -857,16 +868,16 @@ Odpowiedź poprawna: 200 — obiekt [VoucherCheckResult](#vouchercheckresult).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                                     | Warunek wystąpienia                                                        |
-| -------- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                                                | Brak ważnej sesji albo niezgodny token CSRF.                               |
-| 401      | `AUTH_REQUIRED`                                               | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.   |
-| 403      | `FORBIDDEN`                                                   | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.       |
-| 404      | `RESERVATION_NOT_FOUND`                                       | Rezerwacja nie istnieje.                                                   |
-| 400      | `NO_VOUCHER`                                                  | Rezerwacja nie ma vouchera.                                                |
-| 409      | `VOUCHER_INVALID`, `VOUCHER_USED`, `VOUCHER_OUTSIDE_VALIDITY` | D nie potwierdził hotelowej części vouchera.                               |
-| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT`                      | D nie odpowiada.                                                           |
-| —        | błędy wspólne                                                 | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu                                                     | Warunek wystąpienia                                                                  |
+| -------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED`                                               | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`                                                | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                               |
+| 403      | `FORBIDDEN`                                                   | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                 |
+| 404      | `RESERVATION_NOT_FOUND`                                       | Rezerwacja nie istnieje.                                                             |
+| 400      | `NO_VOUCHER`                                                  | Rezerwacja nie ma vouchera.                                                          |
+| 409      | `VOUCHER_INVALID`, `VOUCHER_USED`, `VOUCHER_OUTSIDE_VALIDITY` | D nie potwierdził hotelowej części vouchera.                                         |
+| 503      | `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT`                      | D nie odpowiada.                                                                     |
+| —        | błędy wspólne                                                 | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`           |
 
 ### ZT-20 — Potwierdź wykonanie noclegu w D
 
@@ -891,16 +902,16 @@ Odpowiedź poprawna: 200 — obiekt [VoucherOperation](#voucheroperation).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                | Warunek wystąpienia                                                        |
-| -------- | ------------------------ | -------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`           | Brak ważnej sesji albo niezgodny token CSRF.                               |
-| 401      | `AUTH_REQUIRED`          | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.   |
-| 403      | `FORBIDDEN`              | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.       |
-| 404      | `RESERVATION_NOT_FOUND`  | Rezerwacja nie istnieje.                                                   |
-| 400      | `NO_VOUCHER`             | Rezerwacja nie ma vouchera.                                                |
-| 409      | `HOTEL_NOT_COMPLETED`    | Pobyt nie został jeszcze zakończony.                                       |
-| 409      | `PARTNER_TARGET_CHANGED` | Od rozpoczęcia operacji zmieniono tryb lub adres D.                        |
-| —        | błędy wspólne            | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu                | Warunek wystąpienia                                                                  |
+| -------- | ------------------------ | ------------------------------------------------------------------------------------ |
+| 401      | `AUTH_REQUIRED`          | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany. |
+| 403      | `CSRF_INVALID`           | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                               |
+| 403      | `FORBIDDEN`              | Zalogowany klient albo klucz partnera: operacja tylko dla personelu.                 |
+| 404      | `RESERVATION_NOT_FOUND`  | Rezerwacja nie istnieje.                                                             |
+| 400      | `NO_VOUCHER`             | Rezerwacja nie ma vouchera.                                                          |
+| 409      | `HOTEL_NOT_COMPLETED`    | Pobyt nie został jeszcze zakończony.                                                 |
+| 409      | `PARTNER_TARGET_CHANGED` | Od rozpoczęcia operacji zmieniono tryb lub adres D.                                  |
+| —        | błędy wspólne            | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`           |
 
 ### ZT-21 — Pokaż wszystkie pokoje, także wycofane
 
@@ -963,8 +974,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu           | Warunek wystąpienia                                                                                                     |
 | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`      | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`     | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`     | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`      | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`         | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 409      | `ROOM_NUMBER_TAKEN` | Pokój o takim numerze już istnieje.                                                                                     |
 | —        | błędy wspólne       | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
@@ -1001,8 +1012,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu           | Warunek wystąpienia                                                                                                     |
 | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`      | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`     | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`     | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`      | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`         | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 404      | `ROOM_NOT_FOUND`    | Pokój nie istnieje.                                                                                                     |
 | 409      | `ROOM_NUMBER_TAKEN` | Numer należy do innego pokoju.                                                                                          |
@@ -1068,8 +1079,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu       | Warunek wystąpienia                                                                                                     |
 | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`  | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED` | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED` | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`  | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`     | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | —        | błędy wspólne   | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
 
@@ -1103,8 +1114,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu           | Warunek wystąpienia                                                                                                     |
 | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`      | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`     | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`     | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`      | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`         | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 404      | `PACKAGE_NOT_FOUND` | Pakiet nie istnieje.                                                                                                    |
 | —        | błędy wspólne       | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
@@ -1168,8 +1179,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu       | Warunek wystąpienia                                                                                                     |
 | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`  | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED` | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED` | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`  | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`     | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 409      | `EMAIL_TAKEN`   | Adres e-mail jest już zarejestrowany.                                                                                   |
 | —        | błędy wspólne   | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
@@ -1203,8 +1214,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu        | Warunek wystąpienia                                                                                                     |
 | -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`   | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`  | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`  | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`   | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`      | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 404      | `USER_NOT_FOUND` | Konto nie istnieje.                                                                                                     |
 | 409      | `LAST_ADMIN`     | Zmiana pozostawiłaby hotel bez aktywnego administratora.                                                                |
@@ -1236,8 +1247,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu        | Warunek wystąpienia                                                                                                     |
 | -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`   | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`  | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`  | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`   | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`      | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 404      | `USER_NOT_FOUND` | Konto nie istnieje.                                                                                                     |
 | —        | błędy wspólne    | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
@@ -1296,8 +1307,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu       | Warunek wystąpienia                                                                                                     |
 | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`  | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED` | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED` | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`  | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`     | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | —        | błędy wspólne   | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
 
@@ -1426,15 +1437,16 @@ Odpowiedź poprawna: 200 — obiekt [Integration](#integration).
 
 Odpowiedzi błędów:
 
-| Kod HTTP | Kod błędu                                  | Warunek wystąpienia                                                                                                     |
-| -------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                             | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`                            | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
-| 403      | `FORBIDDEN`                                | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
-| 400      | `INVALID_PARTNER_URL`                      | Adres nie jest pełnym adresem HTTP/HTTPS albo zawiera login, parametry lub fragment.                                    |
-| 400      | `PARTNER_HOST_DENIED`                      | Host nie jest na liście dozwolonych.                                                                                    |
-| 400      | `PRIVATE_ADDRESS_DENIED`, `HTTPS_REQUIRED` | Adres prywatny bez zgody albo HTTP poza lokalnym symulatorem.                                                           |
-| —        | błędy wspólne                              | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
+| Kod HTTP | Kod błędu                                  | Warunek wystąpienia                                                                                                        |
+| -------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 401      | `AUTH_REQUIRED`                            | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                       |
+| 403      | `CSRF_INVALID`                             | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                     |
+| 403      | `FORBIDDEN`                                | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                                |
+| 400      | `INVALID_PARTNER_URL`                      | Adres nie jest pełnym adresem HTTP/HTTPS albo zawiera login, parametry lub fragment.                                       |
+| 400      | `PARTNER_HOST_DENIED`                      | Host nie jest na liście dozwolonych.                                                                                       |
+| 400      | `PRIVATE_ADDRESS_DENIED`, `HTTPS_REQUIRED` | Adres prywatny bez zgody albo HTTP poza lokalnym symulatorem.                                                              |
+| 409      | `PARTNER_IN_USE`                           | Próba wyłączenia połączenia, które ma aktywne lub niewyjaśnione usługi A/B albo pobyty z voucherem przed rozliczeniem w D. |
+| —        | błędy wspólne                              | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`    |
 
 ### ZT-37 — Sprawdź połączenie z partnerem
 
@@ -1461,8 +1473,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu                                                                                | Warunek wystąpienia                                                                         |
 | -------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`                                                                           | Brak ważnej sesji albo niezgodny token CSRF.                                                |
-| 401      | `AUTH_REQUIRED`                                                                          | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                    |
+| 401      | `AUTH_REQUIRED`                                                                          | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.        |
+| 403      | `CSRF_INVALID`                                                                           | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                      |
 | 403      | `FORBIDDEN`                                                                              | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora. |
 | 503      | `PARTNER_DISABLED`, `PARTNER_UNAVAILABLE`, `PARTNER_TIMEOUT`, `PARTNER_INVALID_RESPONSE` | Połączenie jest wyłączone, partner nie odpowiada albo odpowiedź nie pasuje do kontraktu.    |
 | —        | błędy wspólne                                                                            | 400 `VALIDATION_ERROR`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED`                  |
@@ -1556,8 +1568,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu       | Warunek wystąpienia                                                                                                     |
 | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`  | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED` | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED` | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`  | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`     | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | —        | błędy wspólne   | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
 
@@ -1589,8 +1601,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu       | Warunek wystąpienia                                                                                                     |
 | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`  | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED` | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED` | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`  | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`     | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 404      | `KEY_NOT_FOUND` | Klucz nie istnieje.                                                                                                     |
 | —        | błędy wspólne   | 400 `VALIDATION_ERROR`, 400 `INVALID_JSON`, 413 `PAYLOAD_TOO_LARGE`; 403 `PASSWORD_CHANGE_REQUIRED`; 429 `RATE_LIMITED` |
@@ -1623,8 +1635,8 @@ Odpowiedzi błędów:
 
 | Kod HTTP | Kod błędu        | Warunek wystąpienia                                                                                                     |
 | -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 403      | `CSRF_INVALID`   | Brak ważnej sesji albo niezgodny token CSRF.                                                                            |
-| 401      | `AUTH_REQUIRED`  | Token CSRF poprawny, ale sesja jest anonimowa: nikt nie jest zalogowany.                                                |
+| 401      | `AUTH_REQUIRED`  | Brak cookie sesji i tokenu CSRF albo sesja jest anonimowa: nikt nie jest zalogowany.                                    |
+| 403      | `CSRF_INVALID`   | Żądanie z sesją przeglądarki bez zgodnego tokenu CSRF.                                                                  |
 | 403      | `FORBIDDEN`      | Zalogowany klient lub recepcjonista albo klucz partnera: operacja tylko dla administratora.                             |
 | 409      | `DEMO_ONLY`      | Połączenie z D jest w trybie `real`.                                                                                    |
 | 409      | `ALREADY_EXISTS` | Voucher o takim numerze już istnieje.                                                                                   |
@@ -1840,6 +1852,33 @@ Odpowiedzi błędów:
 | 403      | `SCOPE_REQUIRED`    | Podano klucz API bez zakresu `catalog:read`.                                        |
 | —        | błędy wspólne       | 400 `VALIDATION_ERROR`; 429 `RATE_LIMITED`                                          |
 
+### ZP-08 — Pokaż włączone połączenia z innymi projektami
+
+| Element                        | Opis                                                                                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Grupa                          | ZP — zewnętrzny bez tokenu                                                                                                                                                                        |
+| Metoda i ścieżka               | `GET /api/v1/features`                                                                                                                                                                            |
+| Cel operacji i odbiorca        | Informacja, które połączenia z innymi projektami są włączone: masaże (A), treningi (B), vouchery (D). Odbiorca: aplikacja w przeglądarce, która ukrywa niedostępne funkcje, oraz serwer partnera. |
+| Wymagany token i tożsamość     | Brak tokenu. Opcjonalnie klucz partnera (`Authorization: Bearer` albo `X-API-Key`), który reprezentuje serwer partnera.                                                                           |
+| Dozwolone role lub uprawnienia | Każdy, bez logowania. Klucz partnera, jeśli został podany, musi mieć zakres `catalog:read`.                                                                                                       |
+| Ograniczenia dostępu do zasobu | Zwraca tylko trzy wartości logiczne; adresy, tryby i sekrety połączeń widzi wyłącznie administrator (ZT-34, ZT-35). Jeśli żądanie zawiera klucz API, musi on mieć zakres `catalog:read`.          |
+
+Parametry i dane wejściowe:
+
+Brak parametrów.
+
+Treść żądania: Brak treści.
+
+Odpowiedź poprawna: 200 — obiekt [Features](#features).
+
+Odpowiedzi błędów:
+
+| Kod HTTP | Kod błędu         | Warunek wystąpienia                                |
+| -------- | ----------------- | -------------------------------------------------- |
+| 401      | `INVALID_API_KEY` | Podano klucz API, który jest błędny lub wyłączony. |
+| 403      | `SCOPE_REQUIRED`  | Podano klucz API bez zakresu `catalog:read`.       |
+| —        | błędy wspólne     | 429 `RATE_LIMITED`                                 |
+
 ## Słownik odpowiedzi
 
 Obiekty zwracane przez operacje. Pełne definicje, razem z ograniczeniami pól, są w [openapi.yaml](../openapi.yaml).
@@ -1880,6 +1919,14 @@ Wszystkie pola obiektu [User](#user) oraz dodatkowo:
 | `priceMinor`  | integer (0–100000000)     | Jednorazowa cena pakietu w groszach |
 | `active`      | boolean (domyślnie True)  | Czy wpis jest aktywny               |
 | `items`       | lista: obiekt PackageItem | Usługi wchodzące w skład pakietu    |
+
+### Features
+
+| Pole        | Typ     | Znaczenie                                                                                      |
+| ----------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `massages`  | boolean | Połączenie z projektem A (masaże) jest włączone                                                |
+| `trainings` | boolean | Połączenie z projektem B (treningi) jest włączone                                              |
+| `vouchers`  | boolean | Połączenie z projektem D (vouchery) jest włączone; gdy `false`, aplikacja ukrywa pola vouchera |
 
 ### AvailableRoom
 
@@ -2027,16 +2074,16 @@ Wszystkie pola obiektu [Reservation](#reservation) oraz dodatkowo:
 
 ### AuditEvent
 
-| Pole        | Typ                           | Znaczenie                                    |
-| ----------- | ----------------------------- | -------------------------------------------- |
-| `id`        | string (1–100 znaków)         | Identyfikator obiektu                        |
-| `actorType` | string: `user`, `partner`     | Kto wykonał operację: użytkownik czy partner |
-| `actorId`   | string (1–100 znaków)         | Identyfikator autora                         |
-| `actorName` | string                        | Nazwa autora                                 |
-| `action`    | string                        | Nazwa operacji, np. `reservation.created`    |
-| `entityId`  | string                        | Identyfikator obiektu, którego dotyczy wpis  |
-| `details`   | obiekt                        | Bezpieczny opis zmiany, bez haseł i kluczy   |
-| `createdAt` | string (data i czas ISO 8601) | Czas utworzenia (UTC)                        |
+| Pole        | Typ                                  | Znaczenie                                    |
+| ----------- | ------------------------------------ | -------------------------------------------- |
+| `id`        | string (1–100 znaków)                | Identyfikator obiektu                        |
+| `actorType` | string: `user`, `partner`, `service` | Kto wykonał operację: użytkownik czy partner |
+| `actorId`   | string (1–100 znaków)                | Identyfikator autora                         |
+| `actorName` | string                               | Nazwa autora                                 |
+| `action`    | string                               | Nazwa operacji, np. `reservation.created`    |
+| `entityId`  | string                               | Identyfikator obiektu, którego dotyczy wpis  |
+| `details`   | obiekt                               | Bezpieczny opis zmiany, bez haseł i kluczy   |
+| `createdAt` | string (data i czas ISO 8601)        | Czas utworzenia (UTC)                        |
 
 ### Integration
 

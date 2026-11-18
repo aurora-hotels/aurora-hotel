@@ -46,15 +46,15 @@ Argumenty poszczególnych osób są w tabeli stanowisk poniżej.
 
 ## Próba odnalezienia trzech materiałów
 
-Próbę wykonuje osoba, która nie jest autorem szukanych opisów. Po przeniesieniu dokumentacji trzeba ją wykonać w repozytorium.
+Próbę wykonuje osoba, która nie jest autorem szukanych opisów. Po przeniesieniu dokumentacji wykonaliśmy ją w repozytorium, 18 listopada 2026.
 
-| Materiał do odnalezienia              | Gdzie powinien być                                              | Kto szukał | Wynik i trudności |
-| ------------------------------------- | --------------------------------------------------------------- | ---------- | ----------------- |
-| Kryteria akceptacji rezerwacji        | Jira, [KAN-9](https://zielinskiadis.atlassian.net/browse/KAN-9) |            |                   |
-| Opis budowy aplikacji i modelu danych | [Budowa aplikacji](../budowa-aplikacji.md)                      |            |                   |
-| Wynik próby przepływu pracy na KAN-2  | [Testy i odbiór](../testy-i-odbior.md#próba-przepływu-w-jirze)  |            |                   |
+| Materiał do odnalezienia              | Gdzie powinien być                                              | Kto szukał       | Wynik i trudności                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Kryteria akceptacji rezerwacji        | Jira, [KAN-9](https://zielinskiadis.atlassian.net/browse/KAN-9) | Filip Włodarczyk | Znalezione przez spis dokumentacji i odnośnik w [planie prac](../plan-prac.md); bez trudności                      |
+| Opis budowy aplikacji i modelu danych | [Budowa aplikacji](../budowa-aplikacji.md)                      | Filip Włodarczyk | Znalezione od razu w spisie dokumentacji; bez trudności                                                            |
+| Wynik próby przepływu pracy na KAN-2  | [Testy i odbiór](../testy-i-odbior.md#próba-przepływu-w-jirze)  | Filip Włodarczyk | Znalezione przez tabelę „Gdzie czego szukać”; trzeba było wiedzieć, że wynik jest na stronie testów, a nie w Jirze |
 
-Wynik próby nie został jeszcze zapisany.
+Wynik: wszystkie trzy materiały zostały odnalezione. Jedyną trudnością było miejsce wyniku próby na KAN-2, dlatego w tabeli „Gdzie czego szukać” na [stronie głównej dokumentacji](../README.md) jest osobny wiersz dla wyników prób.
 
 ## Stanowiska uczestników
 

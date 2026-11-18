@@ -22,13 +22,14 @@ import {
   Submit,
   useResource,
 } from '../components';
-import type { Page, Reservation, Room, StayPackage } from '../types';
+import type { Features, Page, Reservation, Room, StayPackage } from '../types';
 
 export default function RoomsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const roomsResource = useResource<Page<Room>>('/rooms?pageSize=100'),
-    packagesResource = useResource<Page<StayPackage>>('/packages?pageSize=100');
+    packagesResource = useResource<Page<StayPackage>>('/packages?pageSize=100'),
+    features = useResource<Features>('/features');
   const [checkIn, setCheckIn] = useState(addDays(today(), 1)),
     [checkOut, setCheckOut] = useState(addDays(today(), 3)),
     [guests, setGuests] = useState(2),
@@ -87,7 +88,7 @@ export default function RoomsPage() {
       guests: quote.guests,
       ...(quote.packageId ? { packageId: quote.packageId } : {}),
       expectedTotalMinor: price(chosen),
-      ...(isStaff(user) && form.get('voucherReference')
+      ...(isStaff(user) && features.data?.vouchers && form.get('voucherReference')
         ? {
             voucherReference: String(form.get('voucherReference')),
             hotelComponentId: String(form.get('hotelComponentId')),
@@ -363,7 +364,7 @@ export default function RoomsPage() {
                   <input name="phone" type="tel" defaultValue={user.phone ?? ''} maxLength={30} />
                 </Field>
               </div>
-              {isStaff(user) && (
+              {isStaff(user) && features.data?.vouchers && (
                 <details className="voucher-fields">
                   <summary>Powiąż voucher partnera D (opcjonalnie)</summary>
                   <p className="muted small">

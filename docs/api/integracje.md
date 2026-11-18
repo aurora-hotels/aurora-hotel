@@ -8,7 +8,9 @@ Aplikacja ma dwa tryby połączenia: `demo`, który zwraca odpowiedzi lokalnie, 
 
 ## Stan integracji
 
-Tryb demo oraz lokalne połączenia HTTP są sprawdzone testami. Wspólna próba z aplikacjami A, B i D pozostaje do wykonania po uzgodnieniu kontraktów i danych połączenia. Tryb demo, test jednostkowy ani odpowiedź `/health` nie są dowodem działającej integracji między grupami.
+Tryb demo oraz lokalne połączenia HTTP są sprawdzone testami. Wspólna próba z aplikacjami A i B pozostaje do wykonania po uzgodnieniu kontraktów i danych połączenia. Tryb demo, test jednostkowy ani odpowiedź `/health` nie są dowodem działającej integracji między grupami.
+
+**Projekt D.** W naszej grupie nikt nie podjął się projektu D. Kontrakt D poniżej zostaje jako gotowa propozycja, a połączenie działa w trybie demo. Administrator może je wyłączyć; aplikacja ukrywa wtedy vouchery i działa dalej bez nich ([szczegóły](../budowa-aplikacji.md#praca-bez-projektu-d)). Kolumna D w tabeli niżej czeka, aż projekt D powstanie.
 
 ## Co musimy ustalić
 

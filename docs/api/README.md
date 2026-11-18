@@ -9,7 +9,9 @@ Powiązane strony:
 - [Kontrakty A/B/D](integracje.md): czego hotel oczekuje od API pozostałych grup;
 - [openapi.yaml](../openapi.yaml): pełny kontrakt w formacie OpenAPI 3.
 
-Lokalny adres API to `http://localhost:3001/api/v1`. Do wspólnego testu podamy adres naszego serwera. Po uruchomieniu aplikacji interaktywny opis jest pod `/api/docs`, a plik specyfikacji pod `/api/openapi.yaml`.
+API usług wewnętrznych hotelu (`/internal/v1`, [openapi-internal.yaml](../openapi-internal.yaml)) nie jest przeznaczone dla innych grup: działa tylko z tokenami usług hotelu i na serwerze publicznym nie jest dostępne z Internetu.
+
+Lokalny adres API to `http://localhost:3001/api/v1`. Do wspólnego testu podamy adres naszego serwera (wdrożenie opisuje [Wdrożenie na VPS](../wdrozenie-vps.md)). `GET /features` informuje, które połączenia z innymi projektami są włączone. Po uruchomieniu aplikacji interaktywny opis jest pod `/api/docs`, a plik specyfikacji pod `/api/openapi.yaml`.
 
 ## Klucz i uprawnienia partnera
 
@@ -118,6 +120,8 @@ Pobyt z voucherem można zmienić przez `PATCH /reservations/{id}`. Hotel najpie
 
 Do próby w trybie demo służą `voucherReference: "DEMO-HOTEL-001"` oraz `hotelComponentId: "hotel-demo-001"`. Po wykorzystaniu części hotelowej administrator tworzy nowy voucher testowy w panelu. W trybie `real` potrzebne są dane z projektu D i uzgodniony format połączenia.
 
+W naszej grupie nikt nie podjął się projektu D, dlatego połączenie z D działa w trybie demo. Gdy administrator je wyłączy, `GET /features` zwraca `"vouchers": false`, a rezerwacja z voucherem kończy się błędem 503 `PARTNER_DISABLED`; zwykłe rezerwacje działają bez zmian.
+
 ## Odpowiedzi i błędy
 
 Każdy błąd ma tę samą postać:
@@ -134,16 +138,16 @@ Każdy błąd ma tę samą postać:
 
 Pole `code` jest stałe i nadaje się do obsługi w kodzie. `message` jest tekstem dla człowieka. `fields` wskazuje błędne pola przy błędach walidacji.
 
-| HTTP | Znaczenie                                          | Co sprawdzić                                              |
-| ---- | -------------------------------------------------- | --------------------------------------------------------- |
-| 400  | Niepoprawne dane                                   | Pola wskazane w `fields`; nieznane pola też dają ten błąd |
-| 401  | Brak uwierzytelnienia albo błędny klucz            | Nagłówek z kluczem, ważność sesji                         |
-| 403  | Znamy tożsamość, ale nie ma ona uprawnień          | Zakres klucza, rola, token CSRF, obowiązek zmiany hasła   |
-| 404  | Brak zasobu albo zasób należy do kogoś innego      | Identyfikator i to, czy rezerwacja jest Twoja             |
-| 409  | Konflikt terminu, ceny, wersji, vouchera lub stanu | Pobierz świeże dane i ponów świadomie                     |
-| 413  | Treść żądania większa niż 64 KB                    | Rozmiar żądania                                           |
-| 429  | Za dużo żądań                                      | Odczekaj czas z nagłówka `Retry-After`                    |
-| 503  | Partner niedostępny albo baza chwilowo zajęta      | Ponów później; przy zapisie z tym samym `Idempotency-Key` |
+| HTTP | Znaczenie                                          | Co sprawdzić                                                             |
+| ---- | -------------------------------------------------- | ------------------------------------------------------------------------ |
+| 400  | Niepoprawne dane                                   | Pola wskazane w `fields`; nieznane pola też dają ten błąd                |
+| 401  | Brak uwierzytelnienia albo błędny klucz            | Nagłówek z kluczem, ważność sesji; zapis bez sesji i klucza też daje 401 |
+| 403  | Znamy tożsamość, ale nie ma ona uprawnień          | Zakres klucza, rola, token CSRF, obowiązek zmiany hasła                  |
+| 404  | Brak zasobu albo zasób należy do kogoś innego      | Identyfikator i to, czy rezerwacja jest Twoja                            |
+| 409  | Konflikt terminu, ceny, wersji, vouchera lub stanu | Pobierz świeże dane i ponów świadomie                                    |
+| 413  | Treść żądania większa niż 64 KB                    | Rozmiar żądania                                                          |
+| 429  | Za dużo żądań                                      | Odczekaj czas z nagłówka `Retry-After`                                   |
+| 503  | Partner niedostępny albo baza chwilowo zajęta      | Ponów później; przy zapisie z tym samym `Idempotency-Key`                |
 
 Cudza rezerwacja i nieistniejąca rezerwacja dają ten sam błąd `404 RESERVATION_NOT_FOUND`, żeby odpowiedź nie zdradzała, czy dany identyfikator istnieje. Dokładne rozróżnienie 401 i 403 opisuje [projekt endpointów](projekt-endpointow.md#zasady-sprawdzania-dostępu).
 

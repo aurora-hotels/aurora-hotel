@@ -29,7 +29,7 @@ Celem odbioru jest samodzielna obsługa klientów hotelu oraz udział C we wspó
 - Klient zakłada konto, wybiera wolny pokój i termin, sprawdza cenę, rezerwuje pobyt oraz może go zmienić lub anulować.
 - Recepcja prowadzi listę gości, melduje i wymeldowuje oraz ustala terminy usług z pakietu.
 - Administrator zarządza pokojami, pakietami, kontami i ustawieniami.
-- Hotel łączy nocleg z masażami grupy A, zajęciami fitness grupy B i voucherami grupy D.
+- Hotel łączy nocleg z masażami grupy A, zajęciami fitness grupy B i voucherami grupy D (grupa D nie powstała; vouchery działają w trybie demo).
 - Projekt D tworzy i obsługuje rezerwacje przez API hotelu, w granicach uprawnień swojego klucza.
 
 ## Podział w Jirze
@@ -62,7 +62,7 @@ Eksport listy rezerwacji do CSV i rozbudowane filtry. Sposób postępowania z ta
 
 ## Co zostało do zrobienia przed pokazem
 
-- Uzgodnienie adresów, kluczy i kontraktów z grupami A, B i D oraz wspólna próba na ich aplikacjach.
-- Ręczny odbiór przez członków zespołu: lista prób jest w [testach ręcznych](testy-manualne.md).
+- Uzgodnienie adresów, kluczy i kontraktów z grupami A i B oraz wspólna próba na ich aplikacjach. Projektu D w naszej grupie nikt nie podjął: połączenie z D zostaje w trybie demo i można je wyłączyć ([praca bez D](budowa-aplikacji.md#praca-bez-projektu-d)).
+- Postawienie aplikacji na serwerze według [instrukcji wdrożenia](wdrozenie-vps.md), żeby pozostałe grupy mogły łączyć się z naszym API.
 
 Szczegóły: [wymagania](wymagania.md), [plan prac](plan-prac.md), [testy i odbiór](testy-i-odbior.md).

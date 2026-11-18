@@ -33,6 +33,9 @@ const actionNames: Record<string, string> = {
   'voucher.check': 'Weryfikacja vouchera',
   'demo-voucher.create': 'Dodanie vouchera demo',
   'voucher.completion': 'Potwierdzenie noclegu w D',
+  'operation.reconcile': 'Wyjaśnienie operacji partnera',
+  'maintenance.cleanup': 'Porządkowanie bazy',
+  'backup.create': 'Kopia zapasowa bazy',
 };
 export default function AdminAuditPage() {
   const [page, setPage] = useState(1),

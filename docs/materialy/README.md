@@ -17,7 +17,7 @@ Notebook otwiera się bezpośrednio na GitHubie albo w Google Colab. Zawiera wy�
 
 ## Podsumowanie projektu
 
-Aurora Hotels to studencki projekt C: rezerwacje pokoi, obsługa pobytu, pakiety i połączenia z masażami A, fitness B oraz voucherami D. Aplikacja lokalna jest gotowa; testy obejmują tryb demo i lokalne API partnerów. Wspólna integracja z A, B i D, ręczny odbiór i imienne wpisy z warsztatu pozostają do uzupełnienia. Projekt nie obejmuje płatności ani faktur.
+Aurora Hotels to studencki projekt C: rezerwacje pokoi, obsługa pobytu, pakiety i połączenia z masażami A, fitness B oraz voucherami D. Aplikacja jest gotowa i działa lokalnie oraz w Dockerze; testy obejmują tryb demo i lokalne API partnerów. Wspólna integracja z A i B czeka na ich adresy i klucze; projektu D w grupie nie ma, więc vouchery działają w trybie demo. Projekt nie obejmuje płatności ani faktur.
 
 | Temat               | Strona                                     |
 | ------------------- | ------------------------------------------ |

@@ -20,9 +20,9 @@ Warsztat decyzji zespołowych odbył się 8 listopada 2026 z udziałem całego z
 
 Każdy członek zespołu był moderatorem jednego tematu i notującym innego.
 
-## Co zostało do uzupełnienia
+## Stan rejestru
 
-- **Próba odnalezienia trzech materiałów** przez osobę inną niż autor: tabela na stronie [W6](W6-organizacja-dokumentacji.md#próba-odnalezienia-trzech-materiałów).
+Rejestr jest kompletny: każda decyzja ma warianty, argumenty, rozstrzygnięcie, wdrożenie i stanowiska wszystkich siedmiu osób. Strona [W3](W3-szacowanie.md#indywidualne-wyceny) zawiera indywidualne wyceny, [W5](W5-podzial-pracy.md#zastępstwa) listę zastępstw, a [W6](W6-organizacja-dokumentacji.md#próba-odnalezienia-trzech-materiałów) wynik próby odnalezienia materiałów.
 
 Zadanie w Jirze: [KAN-26](https://zielinskiadis.atlassian.net/browse/KAN-26). Sprawdzenie kont: [KAN-3](https://zielinskiadis.atlassian.net/browse/KAN-3).
 

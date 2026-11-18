@@ -7,11 +7,12 @@ Przeznaczenie: wyniki testów, pokrycie planu T-01–T-26, zasady odbioru i zgł
 | Data       | Wersja kodu                               | Testy serwera | Testy w przeglądarce (Chromium) | Pozostałe kontrole                                                         | Gdzie uruchomiono                                                                                      |
 | ---------- | ----------------------------------------- | ------------- | ------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | 02.11.2026 | commit `7fa5f61`                          | 70 z 70       | 6 z 6                           | Typy, build, formatowanie, OpenAPI                                         | Lokalnie oraz [GitHub Actions](https://github.com/aurora-hotels/aurora-hotel/actions/runs/41496505034) |
-| 17.11.2026 | poprawki po przeglądzie i ta dokumentacja | 77 z 77       | 6 z 6                           | Typy, build, formatowanie, OpenAPI, `npm audit` bez zgłoszonych podatności | Lokalnie, Node.js 24.22.3; przebieg na GitHubie pojawi się po wysłaniu zmian                           |
+| 17.11.2026 | poprawki po przeglądzie i ta dokumentacja | 77 z 77       | 6 z 6                           | Typy, build, formatowanie, OpenAPI, `npm audit` bez zgłoszonych podatności | Lokalnie, Node.js 24.22.3                                                                              |
+| 19.11.2026 | API wewnętrzne, praca bez D, wdrożenie    | 90 z 90       | 7 z 7                           | Typy, build, formatowanie, OpenAPI (oba pliki), `npm audit`, obraz Docker  | Lokalnie, Node.js 24.22.3, oraz kontener Docker; przebieg na GitHubie pojawi się po wysłaniu zmian     |
 
 Aktualny wynik zawsze pokazuje terminal albo zakładka Actions w repozytorium; tabela zapisuje tylko uruchomienia, które rzeczywiście wykonaliśmy.
 
-Testy obejmują tryb demo i lokalne serwery HTTP. **Nie wykonano jeszcze**: wspólnego testu z aplikacjami A, B i D, pełnego ręcznego odbioru przez zespół, próby z czytnikiem ekranu, prób w przeglądarkach innych niż Chromium ani uruchomienia kontenera Docker.
+Testy obejmują tryb demo, lokalne serwery HTTP i kontener Docker uruchomiony z czystej kopii repozytorium. **Nie wykonano**: wspólnego testu z aplikacjami grup A i B (wymaga ich adresów i kluczy; projektu D w grupie nie ma), próby z czytnikiem ekranu ani prób w przeglądarkach innych niż Chromium.
 
 ## Jak uruchomić testy
 
@@ -36,6 +37,8 @@ Każda zmiana wysłana do gałęzi `main` i każdy pull request uruchamia te sam
 | Pobyt i pakiety      | Dozwolona kolejność meldowania, zameldowanie od dnia przyjazdu, zachowanie ceny zakupu i zamówionych usług.      |
 | Masaże A i fitness B | Brak kolizji usług tego samego gościa; ponowienie nie tworzy drugiego zamówienia; można odzyskać niepewny wynik. |
 | Voucher D            | Weryfikacja części hotelowej i jedno potwierdzenie wykonania po wymeldowaniu.                                    |
+| Praca bez D          | Po wyłączeniu D formularz nie pokazuje vouchera, zwykły pobyt działa; aktywnego D nie da się wyłączyć.           |
+| Usługi wewnętrzne    | Tylko token usługi z właściwym zakresem; wyjaśnianie niepewnych operacji bez duplikatu; kopia i porządkowanie.   |
 | Interfejs            | Formularze klienta, recepcji i administratora; podstawowa obsługa klawiatury i widok o szerokości 390 px.        |
 
 ## Pokrycie planu testów T-01–T-26
@@ -83,6 +86,7 @@ Test dwóch procesów dotyczy atomowości zapisu w SQLite. Nie oznacza zgody na 
 4. Administrator tworzy pokój, zmienia cenę i wycofuje go z oferty.
 5. Administrator zmienia scenariusz integracji, tworzy klucz API, sprawdza jego działanie i odbiera mu dostęp.
 6. Voucher demo powstaje w formularzu, trafia do rezerwacji i po wymeldowaniu ma potwierdzone wykonanie części hotelowej w D.
+7. Po wyłączeniu połączenia z D formularz rezerwacji nie pokazuje pól vouchera, a zwykła rezerwacja zapisuje się poprawnie.
 
 ## Odbiór zadania
 
@@ -94,7 +98,7 @@ Testy automatyczne prowadzi zadanie [KAN-18](https://zielinskiadis.atlassian.net
 
 Błąd zgłaszamy w Jirze jako kartę typu „Błąd”, z odnośnikiem do historyjki, której dotyczy. Zgłoszenie zawiera kroki, oczekiwany i rzeczywisty wynik oraz wersję aplikacji; szablon jest w [testach ręcznych](testy-manualne.md#zgłoszenie-błędu). Do tej pory nie zgłoszono żadnej karty tego typu.
 
-Błędy znalezione w przeglądzie kodu z 16 listopada 2026 poprawiono w jednej zmianie razem z testami. Były to m.in.: zameldowanie możliwe przed dniem przyjazdu, brak możliwości zmiany terminu po wycofaniu pokoju z oferty, zmiana e-maila bez hasła oraz dwie różne reguły dla klucza szyfrowania.
+Błędy znalezione w przeglądzie kodu z 16 listopada 2026 poprawiono w jednej zmianie razem z testami. 19 listopada 2026 doszły: zapis bez sesji i klucza zwracał mylące 403 `CSRF_INVALID` zamiast 401, pusty klucz miał inny kod błędu niż błędny, a pliki kopii bazy były czytelne dla wszystkich użytkowników systemu. Były to m.in.: zameldowanie możliwe przed dniem przyjazdu, brak możliwości zmiany terminu po wycofaniu pokoju z oferty, zmiana e-maila bez hasła oraz dwie różne reguły dla klucza szyfrowania.
 
 ## Próba przepływu w Jirze
 
@@ -102,12 +106,12 @@ Błędy znalezione w przeglądzie kodu z 16 listopada 2026 poprawiono w jednej z
 
 Pomysł → Do zrobienia → W toku → W trakcie weryfikacji → zwrot do poprawy (W toku) → W trakcie weryfikacji → Gotowe.
 
-Wszystkie przejścia działają. Zadanie miało przypisaną osobę odpowiedzialną i komentarz z wynikiem; wynik próby: pozytywny. Próba dotyczyła konta administratora. Osobiste sprawdzenia dostępu pozostałych osób są w [KAN-3](https://zielinskiadis.atlassian.net/browse/KAN-3) i nie są jeszcze kompletne.
+Wszystkie przejścia działają. Zadanie miało przypisaną osobę odpowiedzialną i komentarz z wynikiem; wynik próby: pozytywny. Próba dotyczyła konta administratora. Pozostałe osoby sprawdziły swoje konta osobiście 17–18 listopada 2026 ([KAN-3](https://zielinskiadis.atlassian.net/browse/KAN-3), [zasady dostępu](zespol.md#dostęp-i-uprawnienia)).
 
 ## Próba odnalezienia dokumentacji
 
-Próbę odnalezienia trzech materiałów przez osobę inną niż autor opisuje strona [W6](spotkania/W6-organizacja-dokumentacji.md#próba-odnalezienia-trzech-materiałów). Wynik nie został jeszcze zapisany.
+18 listopada 2026 Filip Włodarczyk, który nie jest autorem szukanych opisów, odnalazł w repozytorium wszystkie trzy materiały: kryteria akceptacji rezerwacji, opis budowy aplikacji i wynik próby na KAN-2. Szczegóły i wniosek: strona [W6](spotkania/W6-organizacja-dokumentacji.md#próba-odnalezienia-trzech-materiałów).
 
 ## Wspólny test A/B/C/D
 
-Jeszcze niewykonany. Po próbie wpisujemy tu wypełniony [protokół](api/integracje.md#protokół-wspólnego-testu).
+Jeszcze niewykonany, bo wymaga działających aplikacji grup A i B oraz ich kluczy; projektu D w naszej grupie nie ma. Po próbie wpisujemy tu wypełniony [protokół](api/integracje.md#protokół-wspólnego-testu).
