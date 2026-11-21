@@ -433,6 +433,19 @@ export function assertCanChangeDates(reservationId: string) {
       'Przed zmianą dat anuluj usługi A/B. Jeśli czekają na potwierdzenie, najpierw sprawdź ich stan u partnera.',
     );
 }
+export function assertGuestNamesFree(reservationId: string, before: string[], after: string[]) {
+  const open = ['pending', 'confirmed', 'unknown', 'cancel_pending'];
+  const blocked = all<Booking>(
+    'SELECT * FROM partnerBookings WHERE reservationId=?',
+    reservationId,
+  ).some((x) => open.includes(x.status) && before[x.guestIndex] !== after[x.guestIndex]);
+  if (blocked)
+    throw new IntegrationError(
+      409,
+      'ACTIVE_PARTNER_SERVICES',
+      'Ten gość ma zaplanowaną usługę A/B. Anuluj ją przed zmianą imienia i nazwiska.',
+    );
+}
 export function assertVoucherAvailable(
   input: Pick<VoucherInput, 'voucherReference' | 'hotelComponentId'>,
   reservationId?: string,

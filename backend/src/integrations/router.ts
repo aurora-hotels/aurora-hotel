@@ -42,6 +42,23 @@ function page<T>(items: T[], query: unknown) {
   };
 }
 const id = (value: unknown) => z.string().min(1).max(100).parse(value);
+function partnerInUse(partner: 'A' | 'B' | 'D') {
+  if (partner === 'D')
+    return Boolean(
+      get(
+        "SELECT 1 FROM reservations WHERE voucherReference IS NOT NULL AND status IN ('confirmed','checked_in') LIMIT 1",
+      ) ||
+      get(
+        "SELECT 1 FROM reservations r WHERE r.voucherReference IS NOT NULL AND r.status='completed' AND NOT EXISTS (SELECT 1 FROM voucherOperations v WHERE v.reservationId=r.id AND v.status='reported') LIMIT 1",
+      ),
+    );
+  return Boolean(
+    get(
+      "SELECT 1 FROM partnerBookings WHERE partner=? AND status IN ('pending','confirmed','unknown','cancel_pending') LIMIT 1",
+      partner,
+    ),
+  );
+}
 
 integrationRouter.get('/admin/integrations', admin, (req, res) =>
   res.json(page(integrationList(), req.query)),
@@ -81,6 +98,15 @@ integrationRouter.patch('/admin/integrations/:partner', admin, (req, res) => {
     .strict()
     .parse(req.body);
   const old = get<Integration>('SELECT * FROM integrations WHERE partner=?', partner)!;
+  // Wyłączenie połączenia w trakcie obsługi zostawiłoby pobyty, których nie da się zamknąć.
+  if (input.enabled === false && old.enabled && partnerInUse(partner))
+    throw new IntegrationError(
+      409,
+      'PARTNER_IN_USE',
+      partner === 'D'
+        ? 'Nie można wyłączyć D: są aktywne pobyty z voucherem albo niepotwierdzone rozliczenia w D.'
+        : `Nie można wyłączyć ${partner}: są aktywne lub niewyjaśnione usługi tego partnera.`,
+    );
   const merged = {
     ...old,
     ...input,
@@ -115,7 +141,7 @@ integrationRouter.post('/admin/integrations/:partner/test', admin, async (req, r
   try {
     const result = await testConnection(partner);
     run(
-      'UPDATE integrations SET lastTestAt=?,lastTestResult=? WHERE partner=?',
+      'UPDATE integrations SET lastTestAt=?,lastTestResult=?,lastTestOk=1 WHERE partner=?',
       new Date().toISOString(),
       result.message,
       partner,
@@ -126,7 +152,7 @@ integrationRouter.post('/admin/integrations/:partner/test', admin, async (req, r
     const message =
       error instanceof IntegrationError ? error.message : 'Test połączenia nie powiódł się.';
     run(
-      'UPDATE integrations SET lastTestAt=?,lastTestResult=? WHERE partner=?',
+      'UPDATE integrations SET lastTestAt=?,lastTestResult=?,lastTestOk=0 WHERE partner=?',
       new Date().toISOString(),
       message,
       partner,
@@ -291,11 +317,13 @@ integrationRouter.post('/reservations/:id/voucher/check', staff, async (req, res
   res.json(result);
 });
 integrationRouter.post('/reservations/:id/voucher/confirm-completion', staff, async (req, res) => {
-  const reservationId = id(req.params.id),
-    row = reservationRow(reservationId);
-  if (!row.voucherReference)
+  const reservationId = id(req.params.id);
+  if (!reservationRow(reservationId).voucherReference)
     throw new IntegrationError(400, 'NO_VOUCHER', 'Ta rezerwacja nie ma vouchera.');
-  const result = await withReservationLock(reservationId, () => afterCheckOut(row));
+  // Stan pobytu czytamy dopiero pod blokadą, żeby nie użyć danych sprzed równoległej operacji.
+  const result = await withReservationLock(reservationId, () =>
+    afterCheckOut(reservationRow(reservationId)),
+  );
   audit(req.actor!, 'voucher.completion', reservationId, { status: result?.status });
   res.json(result);
 });

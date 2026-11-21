@@ -7,8 +7,9 @@ info:
     API do rezerwacji pokoi, obsługi pobytu i połączeń z projektami A, B i D. Ceny podajemy w groszach PLN,
     jako liczby całkowite. Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie.
     Przy zapisie przez sesję wymagamy tokenu CSRF. Partner podaje klucz API bez cookie sesji.
-    Żądania z nieznanymi polami są odrzucane. Ustalenia dotyczące API innych grup są w Confluence
-    (https://zielinskiadis.atlassian.net/wiki/spaces/KAN). Format tych połączeń wymaga jeszcze wspólnego uzgodnienia.
+    Żądania z nieznanymi polami są odrzucane. Kontrakty z innymi grupami opisuje docs/api/integracje.md
+    w repozytorium https://github.com/aurora-hotels/aurora-hotel. API usług wewnętrznych (/internal/v1) opisuje
+    osobny plik docs/openapi-internal.yaml.
 servers:
   - url: http://localhost:3001/api/v1
     description: Adres lokalny. Adres do połączenia z innymi grupami ustalamy przed wspólnym testem.
@@ -78,6 +79,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -117,6 +120,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -151,6 +156,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -191,6 +198,7 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       summary: Zmień dane profilu
+      description: Zmiana adresu e-mail wymaga pola currentPassword (400 PASSWORD_REQUIRED lub PASSWORD_INVALID). Zajęty adres zwraca 409 EMAIL_TAKEN.
       operationId: patchMe
       tags:
         - Konto
@@ -213,6 +221,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -251,6 +261,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -378,6 +390,34 @@ paths:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
       description: Lista jest publiczna. Jeśli podajesz klucz API, musi być poprawny i mieć uprawnienie catalog:read.
+  /features:
+    get:
+      summary: Pokaż włączone połączenia z innymi projektami
+      operationId: getFeatures
+      tags:
+        - Oferta
+      security:
+        - {}
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      description:
+        Informuje, czy działają masaże (A), treningi (B) i vouchery (D). Aplikacja ukrywa vouchery, gdy połączenie
+        z D jest wyłączone. Jeśli podajesz klucz API, musi być poprawny i mieć uprawnienie catalog:read.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Features'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '500':
+          $ref: '#/components/responses/Error'
   /availability:
     get:
       summary: Sprawdź wolne pokoje i cenę
@@ -489,6 +529,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -594,13 +636,20 @@ paths:
               - checked_in
               - completed
               - cancelled
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Tylko pobyty obejmujące wskazany dzień, od dnia przyjazdu do dnia wyjazdu włącznie.
         - name: search
           in: query
           required: false
           schema:
             type: string
             maxLength: 100
-      description: Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie. Pole search szuka po numerze rezerwacji lub danych gościa.
+      description: Klient i partner widzą swoje rezerwacje, a recepcja i administrator wszystkie. Pole search szuka po numerze rezerwacji lub imieniu i nazwisku osoby kontaktowej.
       x-required-scope: reservations:read
   /reservations/{id}:
     get:
@@ -671,6 +720,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -720,6 +771,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -747,6 +800,7 @@ paths:
   /reservations/{id}/check-in:
     post:
       summary: Zamelduj gościa
+      description: Możliwe najwcześniej w dniu przyjazdu (czas Europe/Warsaw). Wcześniej zwraca 409 CHECK_IN_TOO_EARLY.
       operationId: postReservationsIdCheckIn
       tags:
         - Recepcja
@@ -769,6 +823,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -819,6 +875,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -845,6 +903,7 @@ paths:
   /reservations/{id}/guests:
     patch:
       summary: Popraw listę gości i dane kontaktowe
+      description: Dane kontaktowe można zmienić zawsze. Zmiana imienia i nazwiska gościa, który ma trwającą usługę A/B, zwraca 409 ACTIVE_PARTNER_SERVICES.
       operationId: patchReservationsIdGuests
       tags:
         - Recepcja
@@ -867,6 +926,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1052,6 +1113,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -1103,6 +1166,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1159,6 +1224,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -1209,6 +1276,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -1251,6 +1320,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1354,6 +1425,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -1393,6 +1466,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1497,6 +1572,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -1536,6 +1613,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1640,6 +1719,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -1679,6 +1760,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1727,6 +1810,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -1808,6 +1893,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -2035,6 +2122,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -2084,6 +2173,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -2253,6 +2344,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -2292,6 +2385,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -2341,6 +2436,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
         '500':
@@ -2377,21 +2474,7 @@ paths:
                       - ok
                 required:
                   - status
-        '400':
-          $ref: '#/components/responses/Error'
-        '401':
-          $ref: '#/components/responses/Error'
-        '403':
-          $ref: '#/components/responses/Error'
-        '404':
-          $ref: '#/components/responses/Error'
-        '409':
-          $ref: '#/components/responses/Error'
-        '429':
-          $ref: '#/components/responses/Error'
         '500':
-          $ref: '#/components/responses/Error'
-        '503':
           $ref: '#/components/responses/Error'
       servers:
         - url: http://localhost:3001
@@ -2420,6 +2503,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/Error'
@@ -2637,6 +2722,12 @@ components:
           maxLength: 30
           pattern: ^[+\d\s()-]*$
           default: ''
+        currentPassword:
+          type: string
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
+          description: Wymagane tylko przy zmianie adresu e-mail.
       minProperties: 1
       additionalProperties: false
     PasswordChange:
@@ -2883,6 +2974,23 @@ components:
       required:
         - name
         - priceMinor
+      additionalProperties: false
+    Features:
+      type: object
+      properties:
+        massages:
+          type: boolean
+          description: Połączenie z projektem A (masaże) jest włączone.
+        trainings:
+          type: boolean
+          description: Połączenie z projektem B (treningi) jest włączone.
+        vouchers:
+          type: boolean
+          description: Połączenie z projektem D (vouchery) jest włączone.
+      required:
+        - massages
+        - trainings
+        - vouchers
       additionalProperties: false
     Package:
       type: object
@@ -3943,6 +4051,7 @@ components:
           enum:
             - user
             - partner
+            - service
         actorId:
           type: string
           minLength: 1

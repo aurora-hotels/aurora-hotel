@@ -6,6 +6,7 @@ export {
   afterCheckOut,
   cancelExternalForReservation,
   assertCanChangeDates,
+  assertGuestNamesFree,
   assertVoucherAvailable,
 } from './services.js';
 export { withReservationLock } from './locks.js';

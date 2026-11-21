@@ -15,7 +15,7 @@ import { AppError, assert } from './errors.js';
 
 export type Role = 'client' | 'receptionist' | 'admin';
 export interface Actor {
-  type: 'user' | 'partner';
+  type: 'user' | 'partner' | 'service';
   id: string;
   name: string;
   role?: Role;
@@ -60,6 +60,12 @@ export function verifyPassword(password: string, hash: string) {
   const result = scryptSync(password, salt, 64);
   const expected = Buffer.from(value, 'hex');
   return expected.length === result.length && timingSafeEqual(expected, result);
+}
+// Nieistniejące konto też liczy scrypt, żeby czas odpowiedzi nie zdradzał, czy adres jest w bazie.
+let dummyHash: string | undefined;
+export function verifyDummyPassword(password: string) {
+  dummyHash ??= hashPassword(randomBytes(16).toString('hex'));
+  verifyPassword(password, dummyHash);
 }
 export function safeUser(user: UserRow) {
   return {
@@ -156,6 +162,10 @@ export const csrfProtection: RequestHandler = (req, _res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.actor?.type === 'partner')
     return next();
   const token = req.get('X-CSRF-Token');
+  // Bez cookie sesji, tokenu CSRF i klucza nie wiemy, kto pyta: to brak uwierzytelnienia (401),
+  // a nie błąd formularza. Logowanie i rejestracja nadal wymagają anonimowej sesji z /auth/csrf.
+  if (!req.session && !token && !['/auth/login', '/auth/register'].includes(req.path))
+    return next(new AppError(401, 'AUTH_REQUIRED', 'Zaloguj się albo podaj klucz API.'));
   if (!req.session || !token || token !== req.session.csrfToken)
     return next(new AppError(403, 'CSRF_INVALID', 'Odśwież formularz i spróbuj ponownie.'));
   const origin = req.get('Origin');
@@ -216,6 +226,19 @@ export function audit(
     JSON.stringify(details),
     now(),
   );
+}
+// Wygasłe sesje i stare klucze idempotencji nie są już potrzebne, a bez sprzątania baza rośnie.
+const IDEMPOTENCY_DAYS = 7;
+export function purgeExpired() {
+  const sessions = run('DELETE FROM sessions WHERE expiresAt<=?', now());
+  const records = run(
+    'DELETE FROM idempotency_records WHERE createdAt<?',
+    new Date(Date.now() - IDEMPOTENCY_DAYS * 86400000).toISOString(),
+  );
+  return {
+    sessionsRemoved: Number(sessions.changes),
+    idempotencyRecordsRemoved: Number(records.changes),
+  };
 }
 export function rateLimit(limit: number, windowMs = 60000): RequestHandler {
   const windows = new Map<string, { count: number; reset: number }>();

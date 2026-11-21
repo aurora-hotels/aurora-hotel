@@ -133,3 +133,8 @@ export interface AuditEvent {
   entityId?: string;
   details?: unknown;
 }
+export interface Features {
+  massages: boolean;
+  trainings: boolean;
+  vouchers: boolean;
+}

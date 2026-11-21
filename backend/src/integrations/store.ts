@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { config } from '../config.js';
 import { db, get, all, run } from '../db.js';
 import type { Integration, Partner } from './types.js';
 import { IntegrationError } from './types.js';
@@ -10,15 +11,13 @@ export const API_SCOPES = [
   'reservations:update',
   'reservations:cancel',
 ] as const;
+// Klucz z npm run setup (64 znaki szesnastkowe) używamy wprost, żeby odczytać sekrety
+// zapisane wcześniej. Każdą inną wartość dopuszczoną przez config.ts skracamy przez SHA-256.
 function encryptionKey() {
-  const value = process.env.CONFIG_ENCRYPTION_KEY;
-  if (!value || !/^[a-f0-9]{64}$/i.test(value))
-    throw new IntegrationError(
-      503,
-      'CONFIG_KEY_MISSING',
-      'Ustaw CONFIG_ENCRYPTION_KEY jako 64 znaki szesnastkowe.',
-    );
-  return Buffer.from(value, 'hex');
+  const value = config.encryptionKey;
+  return /^[a-f0-9]{64}$/i.test(value)
+    ? Buffer.from(value, 'hex')
+    : createHash('sha256').update(value).digest();
 }
 export function protect(value: string): string {
   const iv = randomBytes(12);
@@ -47,6 +46,11 @@ export function initIntegrations() {
     CREATE TABLE IF NOT EXISTS partnerDemoState (partner TEXT NOT NULL, operationId TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(partner, operationId));
     CREATE TABLE IF NOT EXISTS demoVouchers (reference TEXT PRIMARY KEY, componentId TEXT NOT NULL, provider TEXT NOT NULL DEFAULT 'C', kind TEXT NOT NULL DEFAULT 'hotel', validFrom TEXT NOT NULL, validUntil TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, reservationId TEXT);
   `);
+  // Wynik ostatniego testu jako wartość logiczna, potrzebny monitoringowi (W-01).
+  if (
+    !all<{ name: string }>('PRAGMA table_info(integrations)').some((c) => c.name === 'lastTestOk')
+  )
+    db.exec('ALTER TABLE integrations ADD COLUMN lastTestOk INTEGER');
   for (const partner of ['A', 'B', 'D'])
     run('INSERT OR IGNORE INTO integrations(partner) VALUES (?)', partner);
   run(
@@ -63,8 +67,8 @@ export function integration(partner: Partner): Integration {
     );
   return result;
 }
-export function publicIntegration(row: Integration) {
-  const { secret, ...rest } = row;
+export function publicIntegration(row: Integration & { lastTestOk?: number | null }) {
+  const { secret, lastTestOk: _lastTestOk, ...rest } = row;
   return {
     ...rest,
     enabled: Boolean(row.enabled),

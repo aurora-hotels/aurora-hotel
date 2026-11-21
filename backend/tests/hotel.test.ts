@@ -23,8 +23,11 @@ let stranger: any;
 let database: typeof import('../src/db.js');
 let customerId: string;
 const password = 'Student-test-password-2026';
+// Daty liczymy jak serwer, w strefie Europe/Warsaw; inaczej testy psułyby się tuż po północy.
+const warsawToday = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date());
 const day = (offset: number) => {
-  const date = new Date();
+  const date = new Date(`${warsawToday()}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + offset);
   return date.toISOString().slice(0, 10);
 };
@@ -404,7 +407,12 @@ describe('Rezerwacja i wycena', () => {
   });
   it('T-11: obsługa pobytu wymaga personelu i właściwej kolejności statusów', async () => {
     const r = await room();
-    const created = await create(customer, booking(r.id));
+    const early = await create(customer, booking(r.id, { checkIn: day(1), checkOut: day(4) }));
+    const tooEarly = await write(admin, 'post', `/reservations/${early.body.id}/check-in`);
+    expect(tooEarly.status).toBe(409);
+    expect(tooEarly.body.error.code).toBe('CHECK_IN_TOO_EARLY');
+    expect((await write(admin, 'post', `/reservations/${early.body.id}/cancel`)).status).toBe(200);
+    const created = await create(customer, booking(r.id, { checkIn: day(0), checkOut: day(3) }));
     const url = `/reservations/${created.body.id}`;
     expect((await write(customer, 'post', `${url}/check-in`)).status).toBe(403);
     expect((await write(admin, 'post', `${url}/check-out`)).status).toBe(409);
@@ -480,5 +488,107 @@ describe('API innych grup', () => {
     const { seed } = await import('../src/seed.js');
     await seed();
     expect(database.get<any>('SELECT COUNT(*) AS count FROM reservations')!.count).toBe(count);
+  });
+});
+
+describe('Poprawki po przeglądzie', () => {
+  it('Pobyt w pokoju i pakiecie wycofanych z oferty nadal można przesunąć', async () => {
+    const r = await room();
+    const pack = await write(admin, 'post', '/admin/packages', {
+      name: `Wycofany ${randomUUID().slice(0, 8)}`,
+      priceMinor: 5000,
+      items: [],
+    });
+    const created = await create(
+      customer,
+      booking(r.id, { packageId: pack.body.id, expectedTotalMinor: 80000 }),
+    );
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    for (const url of [`/admin/rooms/${r.id}`, `/admin/packages/${pack.body.id}`])
+      expect((await write(admin, 'patch', url, { active: false })).status).toBe(200);
+    const moved = await write(customer, 'patch', `/reservations/${created.body.id}`, {
+      checkIn: day(30),
+      checkOut: day(33),
+      guests: 2,
+      expectedVersion: 1,
+      expectedTotalMinor: 80000,
+    });
+    expect(moved.status, JSON.stringify(moved.body)).toBe(200);
+    expect(moved.body.checkIn).toBe(day(30));
+    // Nowej rezerwacji w wycofanym pokoju nadal nie można założyć.
+    expect(
+      (await create(stranger, booking(r.id, { checkIn: day(40), checkOut: day(43) }))).status,
+    ).toBe(404);
+  });
+  it('Zmiana adresu e-mail wymaga hasła, a zajęty adres i numer pokoju mają czytelny błąd', async () => {
+    const agent = await register(`mail-${randomUUID()}@example.test`);
+    const target = `nowy-${randomUUID()}@example.test`;
+    const missing = await write(agent, 'patch', '/me', { email: target });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error.code).toBe('PASSWORD_REQUIRED');
+    const wrong = await write(agent, 'patch', '/me', { email: target, currentPassword: 'zle' });
+    expect(wrong.body.error.code).toBe('PASSWORD_INVALID');
+    const taken = await write(agent, 'patch', '/me', {
+      email: 'admin@test.local',
+      currentPassword: password,
+    });
+    expect(taken.status).toBe(409);
+    expect(taken.body.error.code).toBe('EMAIL_TAKEN');
+    const changed = await write(agent, 'patch', '/me', {
+      email: target,
+      currentPassword: password,
+    });
+    expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+    expect(changed.body.email).toBe(target);
+    // Sama zmiana nazwy lub telefonu nie wymaga hasła, także gdy formularz odsyła ten sam e-mail.
+    expect(
+      (await write(agent, 'patch', '/me', { name: 'Jan Zmieniony', email: target })).status,
+    ).toBe(200);
+    const r = await room();
+    const duplicate = await write(admin, 'post', '/admin/rooms', {
+      number: r.number,
+      type: 'Duplikat',
+      capacity: 2,
+      nightlyRateMinor: 100,
+    });
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error.code).toBe('ROOM_NUMBER_TAKEN');
+  });
+  it('Wyszukiwanie traktuje % i _ dosłownie', async () => {
+    const r = await room();
+    await create(customer, booking(r.id, { checkIn: day(50), checkOut: day(53) }));
+    const everything = await customer.get('/api/v1/reservations');
+    expect(everything.body.total).toBeGreaterThan(0);
+    for (const search of ['%', '_'])
+      expect((await customer.get('/api/v1/reservations').query({ search })).body.total).toBe(0);
+    expect(
+      (await customer.get('/api/v1/reservations').query({ search: 'Testowy' })).body.total,
+    ).toBe(everything.body.total);
+  });
+  it('Sprzątanie usuwa wygasłe sesje i stare klucze idempotencji, a bieżące zostawia', async () => {
+    const { purgeExpired } = await import('../src/security.js');
+    const old = new Date(Date.now() - 30 * 86400000).toISOString();
+    database.run(
+      'INSERT INTO sessions(id,userId,csrfToken,expiresAt) VALUES(?,?,?,?)',
+      'expired-session',
+      null,
+      'x',
+      old,
+    );
+    database.run(
+      'INSERT INTO idempotency_records(actorKey,requestKey,requestHash,response,createdAt) VALUES(?,?,?,?,?)',
+      'user:old',
+      'old-request-key',
+      'h',
+      '{}',
+      old,
+    );
+    const count = (table: string) =>
+      database.get<any>(`SELECT COUNT(*) AS count FROM ${table}`)!.count;
+    const before = { sessions: count('sessions'), keys: count('idempotency_records') };
+    purgeExpired();
+    expect(count('sessions')).toBe(before.sessions - 1);
+    expect(count('idempotency_records')).toBe(before.keys - 1);
+    expect((await customer.get('/api/v1/me')).status).toBe(200);
   });
 });

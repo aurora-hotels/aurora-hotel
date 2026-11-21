@@ -25,6 +25,7 @@ export const config = {
   production,
   cookieSecure: boolean('COOKIE_SECURE', production),
   databasePath: process.env.DATABASE_PATH || path.resolve('data/aurora.sqlite'),
+  backupDir: path.resolve(process.env.BACKUP_DIR || 'backups'),
   port: number('PORT', 3001, 1, 65535),
   host: process.env.HOST || '127.0.0.1',
   appOrigin: process.env.APP_ORIGIN || 'http://localhost:5173',
@@ -35,6 +36,8 @@ export const config = {
   maxStayNights: number('MAX_STAY_NIGHTS', 90, 1, 365),
   loginLimit: number('LOGIN_RATE_LIMIT', 15, 1, 1000),
   publicLimit: number('PUBLIC_RATE_LIMIT', 300, 1, 10000),
+  // Liczba zaufanych serwerów proxy przed aplikacją; 0 oznacza połączenie bezpośrednie.
+  trustProxy: number('TRUST_PROXY', 0, 0, 10),
   allowedPartnerHosts: (process.env.ALLOWED_PARTNER_HOSTS || '')
     .split(',')
     .map((x) => x.trim())

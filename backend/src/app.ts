@@ -10,11 +10,15 @@ import { authRouter } from './auth.js';
 import { hotelRouter } from './hotel.js';
 import { adminRouter } from './admin.js';
 import { initIntegrations, integrationRouter, authenticateApiKey } from './integrations/index.js';
+import { initServiceTokens, internalRouter } from './internal.js';
 
 export function createApp() {
   initIntegrations();
+  initServiceTokens();
   const app = express();
   app.disable('x-powered-by');
+  // Bez tego za reverse proxy wszyscy użytkownicy mieliby jeden adres IP i wspólny limit żądań.
+  if (config.trustProxy) app.set('trust proxy', config.trustProxy);
   app.use((req, res, next) => {
     res.set({
       'X-Content-Type-Options': 'nosniff',
@@ -45,7 +49,7 @@ export function createApp() {
         return next(new AppError(400, 'AMBIGUOUS_AUTH', 'Podaj jeden klucz API.'));
       const raw = apiKey || authorization?.slice(7);
       if ((apiKey !== undefined || authorization !== undefined) && !raw)
-        return next(new AppError(401, 'API_KEY_INVALID', 'Niepoprawny klucz API.'));
+        return next(new AppError(401, 'INVALID_API_KEY', 'Niepoprawny lub wyłączony klucz API.'));
       if (raw) {
         if (req.actor)
           return next(
@@ -75,6 +79,11 @@ export function createApp() {
     hotelRouter,
     adminRouter,
     integrationRouter,
+  );
+  // API usług technicznych hotelu (W-01–W-05). Nie korzysta z sesji ani z CSRF.
+  app.use('/internal/v1', internalRouter);
+  app.use('/internal', (_req, _res, next) =>
+    next(new AppError(404, 'NOT_FOUND', 'Nie znaleziono takiej operacji wewnętrznej.')),
   );
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
   const openapi = path.join(root, 'docs/openapi.yaml');

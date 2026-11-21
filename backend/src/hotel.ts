@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { all, get, run, transaction } from './db.js';
 import { config } from './config.js';
@@ -21,6 +21,7 @@ import {
   afterCheckOut,
   cancelExternalForReservation,
   assertCanChangeDates,
+  assertGuestNamesFree,
   assertVoucherAvailable,
   withReservationLock,
 } from './integrations/index.js';
@@ -208,11 +209,14 @@ function isRoomAvailable(roomId: string, checkIn: string, checkOut: string, excl
     excludeId,
   );
 }
-function loadOffer(roomId: string, packageId?: string | null) {
-  const room = get<Room>('SELECT * FROM rooms WHERE id=? AND active=1', roomId);
+// Nowa rezerwacja wymaga aktywnej oferty. Istniejący pobyt zachowuje pokój i pakiet,
+// nawet jeśli administrator wycofał je później ze sprzedaży.
+function loadOffer(roomId: string, packageId?: string | null, includeInactive = false) {
+  const activeOnly = includeInactive ? '' : ' AND active=1';
+  const room = get<Room>(`SELECT * FROM rooms WHERE id=?${activeOnly}`, roomId);
   assert(room, 404, 'ROOM_NOT_FOUND', 'Nie znaleziono aktywnego pokoju.');
   const packageItem = packageId
-    ? get<Package>('SELECT * FROM packages WHERE id=? AND active=1', packageId)
+    ? get<Package>(`SELECT * FROM packages WHERE id=?${activeOnly}`, packageId)
     : undefined;
   assert(!packageId || packageItem, 404, 'PACKAGE_NOT_FOUND', 'Nie znaleziono aktywnego pakietu.');
   return { room, packageItem };
@@ -276,6 +280,17 @@ hotelRouter.get('/packages', (req, res) => {
     page: page.page,
     pageSize: page.pageSize,
   });
+});
+// Które połączenia z innymi projektami są włączone. Pozwala ukryć w aplikacji np. vouchery,
+// gdy grupa D nie działa. Same ustawienia połączeń widzi tylko administrator.
+hotelRouter.get('/features', (req, res) => {
+  catalogScope(req);
+  const enabled = (partner: string) =>
+    Boolean(
+      get<{ enabled: number }>('SELECT enabled FROM integrations WHERE partner=?', partner)
+        ?.enabled,
+    );
+  res.json({ massages: enabled('A'), trainings: enabled('B'), vouchers: enabled('D') });
 });
 hotelRouter.get('/availability', (req, res) => {
   catalogScope(req);
@@ -414,10 +429,14 @@ hotelRouter.post('/reservations', requireScope('reservations:create'), async (re
     // Dwa równoległe żądania nie mogą wykorzystać tej samej części vouchera.
     assertVoucherAvailable(body, id);
     const timestamp = now();
+    // Numer jest losowy; przy kolizji losujemy ponownie zamiast zwracać błąd.
+    let number: string;
+    do number = `AH-${new Date().getUTCFullYear()}-${randomBytes(4).toString('hex').toUpperCase()}`;
+    while (get('SELECT id FROM reservations WHERE number=?', number));
     run(
       'INSERT INTO reservations(id,number,userId,partnerId,roomId,packageId,checkIn,checkOut,guests,guestName,guestEmail,guestPhone,guestNames,status,nightlyRateMinor,packagePriceMinor,totalMinor,version,fundingSource,voucherReference,hotelComponentId,createdAt,updatedAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       id,
-      `AH-${new Date().getUTCFullYear()}-${id.slice(0, 8).toUpperCase()}`,
+      number,
       actor.type === 'user' ? actor.id : null,
       actor.type === 'partner' ? actor.id : null,
       room.id,
@@ -494,8 +513,10 @@ hotelRouter.get('/reservations', requireScope('reservations:read'), (req, res) =
   }
   if (req.query.search) {
     const search = z.string().max(100).parse(req.query.search);
-    conditions.push('(number LIKE ? OR guestName LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`);
+    // Znaki % i _ wpisane przez użytkownika szukamy dosłownie.
+    const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+    conditions.push("(number LIKE ? ESCAPE '\\' OR guestName LIKE ? ESCAPE '\\')");
+    params.push(pattern, pattern);
   }
   const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
   const total = get<{ n: number }>(`SELECT COUNT(*) n FROM reservations${where}`, ...params)!.n;
@@ -561,7 +582,7 @@ hotelRouter.patch(
       );
       if (voucherInput) assertVoucherAvailable(voucherInput, row.id);
       assertCanChangeDates(row.id);
-      const { room, packageItem } = loadOffer(row.roomId, row.packageId);
+      const { room, packageItem } = loadOffer(row.roomId, row.packageId, true);
       assert(
         body.guests <= room.capacity,
         400,
@@ -659,6 +680,13 @@ hotelRouter.post(
       'INVALID_STATUS',
       'Gości można zameldować tylko przy potwierdzonej rezerwacji.',
     );
+    assert(
+      row.checkIn <= today(),
+      409,
+      'CHECK_IN_TOO_EARLY',
+      'Gości można zameldować najwcześniej w dniu przyjazdu.',
+      { checkIn: row.checkIn },
+    );
     await beforeCheckIn(row);
     const result = transaction(() => {
       const current = getReservationForActor(row.id, req.actor!);
@@ -744,7 +772,9 @@ hotelRouter.patch(
         'GUEST_NAMES_INVALID',
         'Liczba nazwisk musi odpowiadać liczbie gości.',
       );
-      assertCanChangeDates(row.id);
+      // Dane kontaktowe można poprawić zawsze. Nazwisko gościa z trwającą usługą A/B
+      // zostało już wysłane partnerowi, więc najpierw trzeba tę usługę anulować.
+      assertGuestNamesFree(row.id, JSON.parse(row.guestNames), body.guestNames);
       run(
         'UPDATE reservations SET guestNames=?,guestName=?,guestEmail=?,guestPhone=?,version=version+1,updatedAt=? WHERE id=?',
         JSON.stringify(body.guestNames),

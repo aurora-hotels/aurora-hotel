@@ -71,7 +71,11 @@ beforeAll(async () => {
       );
     });
   });
-  await new Promise<void>((resolve) => server.listen(0, '::', resolve));
+  // Bez IPv6 w systemie nasłuch na :: kończy się błędem; wtedy wystarczy sam adres IPv4.
+  await new Promise<void>((resolve) => {
+    server.once('error', () => server.listen(0, '127.0.0.1', resolve));
+    server.listen(0, '::', resolve);
+  });
   port = (server.address() as { port: number }).port;
 });
 afterAll(async () => {
